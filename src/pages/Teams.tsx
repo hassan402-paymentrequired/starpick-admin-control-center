@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Search, Sync, Download, Upload, Filter } from "lucide-react"
+import { Search, Download, Filter, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Team {
@@ -103,7 +103,7 @@ const Teams = () => {
             disabled={isLoading}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            <Sync className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Sync from API
           </Button>
           <Button variant="outline">

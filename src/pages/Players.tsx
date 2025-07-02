@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Star, Filter, Sync, Download, Eye } from "lucide-react"
+import { Search, Star, Filter, Download, Eye, RotateCcw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
@@ -134,7 +133,7 @@ const Players = () => {
             disabled={isLoading}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            <Sync className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Sync Players
           </Button>
           <Button variant="outline">

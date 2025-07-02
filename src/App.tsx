@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Teams from "./pages/Teams";
 import Players from "./pages/Players";
 import Rooms from "./pages/Rooms";
+import RoomDetails from "./pages/RoomDetails";
+import MatchCreation from "./pages/MatchCreation";
 import Users from "./pages/Users";
 import SyncLogs from "./pages/SyncLogs";
 import NotFound from "./pages/NotFound";
@@ -27,6 +29,8 @@ const App = () => (
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
             <Route path="/rooms" element={<Rooms />} />
+            <Route path="/rooms/:id" element={<RoomDetails />} />
+            <Route path="/match-creation" element={<MatchCreation />} />
             <Route path="/users" element={<Users />} />
             <Route path="/sync-logs" element={<SyncLogs />} />
             <Route path="*" element={<NotFound />} />

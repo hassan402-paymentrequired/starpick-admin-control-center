@@ -1,7 +1,7 @@
 
 import { useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import { LayoutDashboard, Users, UserRound, Home, User, FileText, Star } from "lucide-react"
+import { LayoutDashboard, Users, UserRound, Home, User, FileText, Star, Swords } from "lucide-react"
 
 import {
   Sidebar,
@@ -21,6 +21,7 @@ const navigationItems = [
   { title: "Teams", url: "/teams", icon: Users },
   { title: "Players", url: "/players", icon: UserRound },
   { title: "Rooms", url: "/rooms", icon: Home },
+  { title: "Match Creation", url: "/match-creation", icon: Swords },
   { title: "Users", url: "/users", icon: User },
   { title: "Sync Logs", url: "/sync-logs", icon: FileText },
 ]

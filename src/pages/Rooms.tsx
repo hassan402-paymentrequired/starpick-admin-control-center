@@ -1,9 +1,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Home, Users, Clock, Settings } from "lucide-react"
+import { Home, Users, Clock, Settings, Eye } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 const Rooms = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -44,10 +47,20 @@ const Rooms = () => {
                 <span className="text-sm text-muted-foreground">Prize Pool</span>
                 <span className="font-semibold text-primary">{room.prize}</span>
               </div>
-              <Button className="w-full" variant="outline">
-                <Settings className="w-4 h-4 mr-2" />
-                Manage Room
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1" 
+                  variant="outline"
+                  onClick={() => navigate(`/rooms/${room.id}`)}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
+                <Button className="flex-1" variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

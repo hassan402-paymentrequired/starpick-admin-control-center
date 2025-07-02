@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Users, Trophy, Clock, Star, Crown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import PlayerSelection from "@/components/PlayerSelection"
 
 interface RoomUser {
   id: string
@@ -34,11 +36,21 @@ interface Room {
   users: RoomUser[]
 }
 
+interface PlayerBet {
+  playerId: string
+  type: "main" | "sub"
+}
+
+interface UserBets {
+  [userId: string]: PlayerBet[]
+}
+
 const RoomDetails = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [room, setRoom] = useState<Room | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [userBets, setUserBets] = useState<UserBets>({})
   const { toast } = useToast()
 
   // Mock data - replace with actual API call
@@ -79,6 +91,13 @@ const RoomDetails = () => {
       title: "User Removed",
       description: `${user?.name} has been removed from the room.`,
     })
+  }
+
+  const handleBetUpdate = (userId: string, bets: PlayerBet[]) => {
+    setUserBets(prev => ({
+      ...prev,
+      [userId]: bets
+    }))
   }
 
   if (isLoading) {
@@ -208,77 +227,99 @@ const RoomDetails = () => {
         </CardContent>
       </Card>
 
-      {/* Participants Table */}
-      <Card className="bg-card/50 backdrop-blur border-border">
-        <CardHeader>
-          <CardTitle className="text-foreground">Participants Leaderboard</CardTitle>
-          <CardDescription>Current standings and participant details</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rank</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {room.users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {user.rank === 1 && <Crown className="w-4 h-4 text-yellow-500" />}
-                      <span className="font-medium">#{user.rank}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium text-foreground">{user.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-bold text-primary">{user.score.toLocaleString()}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">
-                      {new Date(user.joinedAt).toLocaleDateString()}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {user.isOwner ? (
-                      <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
-                        Owner
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Member</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {!user.isOwner && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleKickUser(user.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Tabs for Participants and Player Bets */}
+      <Tabs defaultValue="participants" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="participants">Participants Leaderboard</TabsTrigger>
+          <TabsTrigger value="player-bets">Player Bets</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="participants">
+          <Card className="bg-card/50 backdrop-blur border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Participants Leaderboard</CardTitle>
+              <CardDescription>Current standings and participant details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Rank</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {room.users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {user.rank === 1 && <Crown className="w-4 h-4 text-yellow-500" />}
+                          <span className="font-medium">#{user.rank}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-foreground">{user.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-primary">{user.score.toLocaleString()}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">
+                          {new Date(user.joinedAt).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {user.isOwner ? (
+                          <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                            Owner
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Member</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {!user.isOwner && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleKickUser(user.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="player-bets">
+          <div className="space-y-6">
+            {room.users.map((user) => (
+              <PlayerSelection
+                key={user.id}
+                userId={user.id}
+                userName={user.name}
+                onBetUpdate={handleBetUpdate}
+              />
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

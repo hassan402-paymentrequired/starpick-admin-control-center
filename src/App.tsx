@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +13,7 @@ import MatchCreation from "./pages/MatchCreation";
 import Users from "./pages/Users";
 import SyncLogs from "./pages/SyncLogs";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/auth/Login";
 
 const queryClient = new QueryClient();
 
@@ -23,9 +23,10 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
             <Route path="/rooms" element={<Rooms />} />
@@ -34,8 +35,8 @@ const App = () => (
             <Route path="/users" element={<Users />} />
             <Route path="/sync-logs" element={<SyncLogs />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
+          </Route>
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

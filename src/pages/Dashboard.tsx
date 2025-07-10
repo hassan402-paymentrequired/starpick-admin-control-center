@@ -1,5 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useFetch } from "@/hooks/useFetch";
 import { Users, UserRound, Home, Activity, TrendingUp, Star } from "lucide-react"
 
 const Dashboard = () => {
@@ -33,6 +34,9 @@ const Dashboard = () => {
       color: "text-orange-500"
     }
   ]
+const { data, loading, error, refetch, abort } = useFetch(
+    "https://example.com/items/"
+  );
 
   return (
     <div className="space-y-8 animate-fade-in">

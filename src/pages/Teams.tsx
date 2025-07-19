@@ -46,6 +46,7 @@ const Teams = () => {
     }
   }, [data]);
 console.log(data)
+console.log(error?.response)
 
 
 

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { useFetch } from "@/hooks/useFetch";
 import { Team } from "./Teams";
+import {useFormRequest} from "@/hooks/useForm.ts";
 
 export interface Player {
   id: string;
@@ -53,15 +54,29 @@ const Players = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(12);
   const { toast } = useToast();
-  const { data, loading, error, refetch, abort } =
-    useFetch<Player[]>("/admin/players");
-  console.log(data);
+  // const { data, loading, error, refetch, abort } = useFetch<Player[]>("/admin/players");
+  const {patch, errors} = useFormRequest()
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    abort
+  } = useFetch(`/admin/players?page=${currentPage}`);
+
+
+
   useEffect(() => {
     if (data) {
-      setPlayers(data?.data.players);
-      setFilteredPlayers(data?.data.players);
+      const playerList = data?.data?.players?.data ?? [];
+      setPlayers(playerList);
+      setFilteredPlayers(playerList);
+
     }
-  }, [data]);
+    console.log(data)
+
+  }, [data, currentPage]);
+
 
   useEffect(() => {
     let filtered = players.filter((player) => {
@@ -97,14 +112,17 @@ const Players = () => {
     });
   };
 
-  const handleRatingChange = (playerId: string, newRating: number) => {
+  const handleRatingChange = async (playerId: string, newRating: number) => {
+
+
+    const res = await patch(`/admin/players/star/${playerId}/update`, {rating: newRating});
     setPlayers((prevPlayers) =>
       prevPlayers.map((player) =>
         player.id === playerId ? { ...player, rating: newRating } : player
       )
     );
-
     const player = players.find((p) => p.id === playerId);
+
     toast({
       title: "Rating Updated",
       description: `${player?.name}'s rating has been updated to ${newRating} stars.`,
@@ -126,11 +144,7 @@ const Players = () => {
   const teams = Array.from(new Set(players?.map((p) => p.team)));
   const positions = Array.from(new Set(players?.map((p) => p.position)));
 
-  // Pagination
-  const totalPages = Math.ceil(filteredPlayers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentPlayers = filteredPlayers.slice(startIndex, endIndex);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -221,7 +235,7 @@ const Players = () => {
 
       {/* Players Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {currentPlayers?.map((player) => (
+        {filteredPlayers?.map((player) => (
           <Card
             key={player.id}
             className="bg-card/50 backdrop-blur border-border hover:bg-card/80 transition-all duration-200"
@@ -369,30 +383,27 @@ const Players = () => {
         ))}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground px-4">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      {/*{totalPages > 1 && (*/}
+      {/*    <div className="flex justify-center items-center gap-2 mt-4">*/}
+      {/*      <Button*/}
+      {/*          variant="outline"*/}
+      {/*          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}*/}
+      {/*          disabled={currentPage === 1}*/}
+      {/*      >*/}
+      {/*        Previous*/}
+      {/*      </Button>*/}
+      {/*      <span className="text-sm text-muted-foreground px-4">*/}
+      {/*      Page {currentPage} of {totalPages}*/}
+      {/*    </span>*/}
+      {/*      <Button*/}
+      {/*          variant="outline"*/}
+      {/*          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}*/}
+      {/*          disabled={currentPage === totalPages}*/}
+      {/*      >*/}
+      {/*        Next*/}
+      {/*      </Button>*/}
+      {/*    </div>*/}
+      {/*)}*/}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

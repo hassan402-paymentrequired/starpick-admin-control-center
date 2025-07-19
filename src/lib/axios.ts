@@ -1,6 +1,6 @@
 // src/lib/axios.ts
 import axios from 'axios';
-import { removeTokenAndUser } from './cookie';
+import { getCookie, removeTokenAndUser } from './cookie';
 import { toast } from 'sonner';
 
 const api = axios.create({
@@ -13,7 +13,8 @@ const api = axios.create({
 // Request interceptor for adding token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token'); // or from Redux, Zustand, etc.
+        const token = getCookie('_token');
+        // console.log(token)
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -22,13 +23,13 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor for handling errors globally
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
             removeTokenAndUser();
             toast("Session expired. please login ");
+            window.location.href= '/'
         }
         return Promise.reject(error);
     }

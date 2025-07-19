@@ -11,7 +11,7 @@ export function useFormRequest<T>() {
     const post = async <T = any>(url: string, data: any) => {
         setLoading(true);
         try {
-            const response = await api.post<T>(url, data);
+            const response = await api.post(url, data);
             return response.data;
         } catch (err: any) {
             if (err.name !== "AbortError") {
@@ -23,28 +23,35 @@ export function useFormRequest<T>() {
         }
     };
     const patch = async (url: string, data: any) => {
-        fetch(base_url + url, {
-            method: "patch",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-        }).then((res) => res.json())
-            .then((res) => {
-                setData(res);
-                return res as T;
-            })
-            .catch((err) => {
-                if (err.name !== "AbortError") {
-                    setErrors(err);
-                }
-                return err;
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+        setLoading(true);
+        try {
+            const response = await api.patch(url, data);
+            return response.data;
+        } catch (err: any) {
+            if (err.name !== "AbortError") {
+                setErrors(err.response?.data || err.message);
+            }
+            throw err;
+        } finally {
+            setLoading(false);
+        }
 
     };
 
-    return { post, patch, loading, errors, data, setErrors }
+    const get = async (url:string) => {
+        setLoading(true);
+        try {
+            const response = await api.get(url);
+            return response.data;
+        } catch (err: any) {
+            if (err.name !== "AbortError") {
+                setErrors(err.response?.data || err.message);
+            }
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return { post, patch, loading, errors, data, setErrors, get }
 };

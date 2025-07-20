@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { useFetch } from "@/hooks/useFetch";
 import { Team } from "./Teams";
-import {useFormRequest} from "@/hooks/useForm.ts";
+import { useFormRequest } from "@/hooks/useForm.ts";
+import api from "@/lib/axios";
 
 export interface Player {
   id: string;
@@ -37,7 +38,7 @@ export interface Player {
   position: string;
   team: Team;
   teamLogo: string;
-  rating: number;
+  player_rating: number;
   isActive: boolean;
   external_id: string;
   nationality: string;
@@ -50,49 +51,63 @@ const Players = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedPosition, setSelectedPosition] = useState("all");
+  const [selectedRating, setSelectedRating] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPlayers, setTotalPlayers] = useState(0);
   const [itemsPerPage] = useState(12);
   const { toast } = useToast();
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [paginationLinks, setPaginationLinks] = useState([]);
   // const { data, loading, error, refetch, abort } = useFetch<Player[]>("/admin/players");
-  const {patch, errors} = useFormRequest()
-  const {
-    data,
-    loading,
-    error,
-    refetch,
-    abort
-  } = useFetch(`/admin/players?page=${currentPage}`);
-
-
+  const { patch, errors } = useFormRequest();
+  const { data, loading, error, refetch, abort } = useFetch(
+    `/admin/players?page=${currentPage}`
+  );
 
   useEffect(() => {
     if (data) {
       const playerList = data?.data?.players?.data ?? [];
       setPlayers(playerList);
       setFilteredPlayers(playerList);
-
+      setTotalPages(data?.data?.players?.last_page ?? 1);
+      setTotalPlayers(data?.data?.players?.total ?? playerList.length);
+      setPaginationLinks(data?.data?.players?.links ?? []);
     }
-    console.log(data)
-
+    console.log(data);
   }, [data, currentPage]);
 
-
   useEffect(() => {
-    let filtered = players.filter((player) => {
+    // Fetch teams for filter dropdown
+    api.get("/admin/teams").then((res) => {
+      setTeams(res.data);
+    });
+  }, []);
+
+  // Reset page to 1 only when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedTeam, selectedPosition, selectedRating]);
+
+  // Filter players when players or filters change (but don't reset page)
+  useEffect(() => {
+    const filtered = players.filter((player) => {
       const matchesSearch =
         player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         player.team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         player.position.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPosition =
         selectedPosition === "all" || player.position === selectedPosition;
-
-      return matchesSearch && matchesPosition;
+      const matchesTeam =
+        selectedTeam === "all" || player.team.id === selectedTeam;
+      const matchesRating =
+        selectedRating === "all" ||
+        player.player_rating === Number(selectedRating);
+      return matchesSearch && matchesPosition && matchesTeam && matchesRating;
     });
-
     setFilteredPlayers(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, selectedTeam, selectedPosition, players]);
+  }, [players, searchQuery, selectedTeam, selectedPosition, selectedRating]);
 
   const handleToggleActive = (playerId: string) => {
     setPlayers((prevPlayers) =>
@@ -113,14 +128,11 @@ const Players = () => {
   };
 
   const handleRatingChange = async (playerId: string, newRating: number) => {
-
-
-    const res = await patch(`/admin/players/star/${playerId}/update`, {rating: newRating});
-    setPlayers((prevPlayers) =>
-      prevPlayers.map((player) =>
-        player.id === playerId ? { ...player, rating: newRating } : player
-      )
-    );
+    console.log(playerId, newRating);
+    await patch(`/admin/players/star/${playerId}/update`, {
+      rating: newRating,
+    });
+    refetch();
     const player = players.find((p) => p.id === playerId);
 
     toast({
@@ -128,6 +140,8 @@ const Players = () => {
       description: `${player?.name}'s rating has been updated to ${newRating} stars.`,
     });
   };
+
+  // console.log(error);
 
   const handleSyncPlayers = async () => {
     setIsLoading(true);
@@ -141,10 +155,7 @@ const Players = () => {
   };
 
   // Get unique teams and positions for filters
-  const teams = Array.from(new Set(players?.map((p) => p.team)));
   const positions = Array.from(new Set(players?.map((p) => p.position)));
-
-
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -200,11 +211,11 @@ const Players = () => {
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
                 <SelectItem value="all">All Teams</SelectItem>
-                {/* {teams.map((team) => (
-                  <SelectItem key={team.id} value={team}>
-                    {team}
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name}
                   </SelectItem>
-                ))} */}
+                ))}
               </SelectContent>
             </Select>
 
@@ -220,6 +231,20 @@ const Players = () => {
                 {positions.map((position) => (
                   <SelectItem key={position} value={position}>
                     {position}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedRating} onValueChange={setSelectedRating}>
+              <SelectTrigger className="bg-background/50 border-border">
+                <SelectValue placeholder="Filter by rating" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border">
+                <SelectItem value="all">All Ratings</SelectItem>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <SelectItem key={star} value={String(star)}>
+                    {star} Star{star > 1 ? "s" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -251,7 +276,6 @@ const Players = () => {
                       <Badge variant="outline" className="text-xs">
                         {player.position}
                       </Badge>
-                    
                     </div>
                     <div className="text-sm font-medium text-foreground">
                       {player?.team.name}
@@ -299,9 +323,7 @@ const Players = () => {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Age:</span>
-                          <p className="font-medium text-foreground">
-                            21
-                          </p>
+                          <p className="font-medium text-foreground">21</p>
                         </div>
                         <div>
                           <span className="text-muted-foreground">
@@ -311,7 +333,7 @@ const Players = () => {
                             {player.nationality}
                           </p>
                         </div>
-                       
+
                         <div>
                           <span className="text-muted-foreground">Status:</span>
                           <p className="font-medium text-foreground">
@@ -340,7 +362,7 @@ const Players = () => {
                     >
                       <Star
                         className={`w-5 h-5 ${
-                          star <= player.rating
+                          star <= player.player_rating
                             ? "text-primary fill-primary"
                             : "text-muted-foreground hover:text-primary/50"
                         }`}
@@ -348,7 +370,7 @@ const Players = () => {
                     </button>
                   ))}
                   <span className="ml-2 text-sm text-muted-foreground">
-                    {player.rating}/5
+                    {player.player_rating}/5
                   </span>
                 </div>
               </div>
@@ -383,27 +405,33 @@ const Players = () => {
         ))}
       </div>
 
-      {/*{totalPages > 1 && (*/}
-      {/*    <div className="flex justify-center items-center gap-2 mt-4">*/}
-      {/*      <Button*/}
-      {/*          variant="outline"*/}
-      {/*          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}*/}
-      {/*          disabled={currentPage === 1}*/}
-      {/*      >*/}
-      {/*        Previous*/}
-      {/*      </Button>*/}
-      {/*      <span className="text-sm text-muted-foreground px-4">*/}
-      {/*      Page {currentPage} of {totalPages}*/}
-      {/*    </span>*/}
-      {/*      <Button*/}
-      {/*          variant="outline"*/}
-      {/*          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}*/}
-      {/*          disabled={currentPage === totalPages}*/}
-      {/*      >*/}
-      {/*        Next*/}
-      {/*      </Button>*/}
-      {/*    </div>*/}
-      {/*)}*/}
+      {/* Pagination Controls */}
+      {paginationLinks.length > 0 && (
+        <div className="flex justify-center items-center gap-2 mt-4">
+          {paginationLinks.map((link, idx) => {
+            // Always extract page number from URL if present
+            let pageNum = null;
+            if (link.url) {
+              const match = link.url.match(/page=(\d+)/);
+              if (match) pageNum = Number(match[1]);
+            }
+            return (
+              <button
+                key={idx}
+                className={`px-3 py-1 border rounded disabled:opacity-50 ${
+                  link.active ? "bg-primary text-white" : ""
+                }`}
+                disabled={!link.url || link.active}
+                onClick={() => {
+                  if (pageNum && pageNum !== currentPage)
+                    setCurrentPage(pageNum);
+                }}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -433,7 +461,7 @@ const Players = () => {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {players.filter((p) => p.rating === 5).length}
+                {players.filter((p) => p.player_rating === 5).length}
               </div>
               <div className="text-sm text-muted-foreground">
                 5-Star Players
@@ -446,7 +474,7 @@ const Players = () => {
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-400">
                 {Math.round(
-                  (players.reduce((acc, p) => acc + p.rating, 0) /
+                  (players.reduce((acc, p) => acc + p.player_rating, 0) /
                     players.length) *
                     10
                 ) / 10}

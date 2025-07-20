@@ -13,13 +13,15 @@ import { Switch } from "@/components/ui/switch";
 import { Search, Download, Filter, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFetch } from "@/hooks/useFetch";
+import api from "@/lib/axios";
+import { Link } from "react-router-dom";
 
 export interface Team {
   id: string;
   name: string;
   logo: string;
   external_id?: string;
-  isActive?: boolean;
+  status: number; // 1 = active, 0 = inactive
   league: string;
   country: string;
   code: string;
@@ -45,10 +47,8 @@ const Teams = () => {
       setFilteredTeams(data);
     }
   }, [data]);
-console.log(data)
-console.log(error?.response)
 
-
+  console.log(data);
 
   // Filter teams based on search query
   useEffect(() => {
@@ -61,20 +61,28 @@ console.log(error?.response)
     setFilteredTeams(filtered);
     setCurrentPage(1);
   }, [searchQuery, teams]);
-  const handleToggleActive = (teamId: string) => {
-    setTeams((prevTeams) =>
-      prevTeams.map((team) =>
-        team.id === teamId ? { ...team, isActive: !team.isActive } : team
-      )
-    );
 
+  const handleToggleActive = async (teamId: string) => {
     const team = teams.find((t) => t.id === teamId);
-    toast({
-      title: team?.isActive ? "Team Deactivated" : "Team Activated",
-      description: `${team?.name} has been ${
-        team?.isActive ? "deactivated" : "activated"
-      } successfully.`,
-    });
+    if (!team) return;
+    const newStatus = team.status === 1 ? 0 : 1;
+    try {
+      await api.patch(`/admin/teams/${teamId}/status`, { status: newStatus });
+      refetch();
+      toast({
+        title: newStatus === 1 ? "Team Activated" : "Team Deactivated",
+        description: `${team.name} has been ${
+          newStatus === 1 ? "activated" : "deactivated"
+        } successfully.`,
+      });
+    } catch (error) {
+      console.log(error, teamId);
+      toast({
+        title: "Error",
+        description: `Failed to update status for ${team.name}.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSyncTeams = async () => {
@@ -89,7 +97,7 @@ console.log(error?.response)
     }, 2000);
   };
 
-if(!data) return <div>loading</div>
+  if (!data) return <div>loading</div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -148,58 +156,65 @@ if(!data) return <div>loading</div>
 
       {/* Teams Gri wsd */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredTeams && filteredTeams?.map((team) => (
-          <Card
-            key={team.id}
-            className="bg-card/50 backdrop-blur border-border hover:bg-card/80 transition-all duration-200"
-          >
-            <CardHeader className="text-center pb-2">
-              <div className="w-16 h-16 mx-auto mb-3 bg-background/50 rounded-full flex items-center justify-center overflow-hidden">
-                <img
-                  src={team.logo}
-                  alt={team.name}
-                  className="w-12 h-12 object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg";
-                  }}
-                />
-              </div>
-              <CardTitle className="text-lg text-foreground">
-                {team.name}
-              </CardTitle>
-              <CardDescription className="space-y-1">
-                <div>{team.league}</div>
-                <div className="text-xs">{team.country}</div>
-                {team.external_id && (
-                  <div className="text-xs font-mono bg-muted/50 px-2 py-1 rounded">
-                    ID: {team.external_id}
-                  </div>
-                )}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={team.isActive ? "default" : "secondary"}
-                    className={
-                      team.isActive
-                        ? "bg-green-500/20 text-green-400 border-green-500/30"
-                        : ""
-                    }
-                  >
-                    {team.isActive ? "Active" : "Inactive"}
-                  </Badge>
+        {filteredTeams &&
+          filteredTeams?.map((team) => (
+            <Card
+              key={team.id}
+              className="bg-card/50 backdrop-blur border-border hover:bg-card/80 transition-all duration-200"
+            >
+              <CardHeader className="text-center pb-2">
+                <div className="w-16 h-16 mx-auto mb-3 bg-background/50 rounded-full flex items-center justify-center overflow-hidden">
+                  <img
+                    src={team.logo}
+                    alt={team.name}
+                    className="w-12 h-12 object-contain"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.svg";
+                    }}
+                  />
                 </div>
-                <Switch
-                  checked={team.isActive}
-                  onCheckedChange={() => handleToggleActive(team.id)}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <CardTitle className="text-lg text-foreground">
+                  {team.name}
+                </CardTitle>
+                <CardDescription className="space-y-1">
+                  <div>{team.league}</div>
+                  <div className="text-xs">{team.country}</div>
+                  {team.external_id && (
+                    <div className="text-xs font-mono bg-muted/50 px-2 py-1 rounded">
+                      ID: {team.external_id}
+                    </div>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={team.status === 1 ? "default" : "secondary"}
+                      className={
+                        team.status === 1
+                          ? "bg-green-500/20 text-green-400 border-green-500/30"
+                          : ""
+                      }
+                    >
+                      {team.status === 1 ? "Active" : "Inactive"}
+                    </Badge>
+                    <Link
+                      to={`/teams/${team.id}/players`}
+                      className="ml-2 text-primary underline text-xs"
+                    >
+                      View Players
+                    </Link>
+                  </div>
+                  <Switch
+                    checked={team.status === 1}
+                    onCheckedChange={() => handleToggleActive(team.id)}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       {/* Pagination */}
@@ -243,7 +258,7 @@ if(!data) return <div>loading</div>
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">
-                {teams.filter((t) => t.isActive).length}
+                {teams.filter((t) => t.status === 1).length}
               </div>
               <div className="text-sm text-muted-foreground">Active Teams</div>
             </div>
@@ -253,7 +268,7 @@ if(!data) return <div>loading</div>
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-red-400">
-                {teams.filter((t) => !t.isActive).length}
+                {teams.filter((t) => t.status === 0).length}
               </div>
               <div className="text-sm text-muted-foreground">
                 Inactive Teams

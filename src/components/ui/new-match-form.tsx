@@ -23,9 +23,6 @@ type matchForm = {
   playingTeam: string;
   againstTeam: string;
   playerIds: string[];
-  date: string;
-  time: string;
-  league: string;
 };
 
 const NewMatchForm = ({
@@ -139,7 +136,7 @@ const NewMatchForm = ({
     const data = getValues();
     const selectedPlayers = getValues("playerIds") || [];
 
-    // Create payload array: [{playerId: 23, againstTeam: 2}, ...]
+    // Create payload array: [{playerId: 23, againstTeam: 2, fixtureId: 1}, ...]
     const payload = selectedPlayers.map((playerId) => {
       // Check if player is from home team or away team
       const isHomeTeamPlayer = homeTeamPlayers?.some(
@@ -155,12 +152,18 @@ const NewMatchForm = ({
       return {
         playerId: parseInt(playerId),
         againstTeam: againstTeam,
+        fixtureId: selectedFixture?.id,
       };
     });
-    console.log(payload);
-    return;
+
+    const real_payload = {
+      matches: payload,
+      fixture_id: selectedFixture?.id,
+    };
+
     try {
-      const res = await post(`/admin/match`, payload);
+      const res = await post(`/admin/match/create-from-fixture`, real_payload);
+      console.log(res);
       toast({
         title: "Match created",
         description: "Match has being created successfully",
@@ -169,7 +172,46 @@ const NewMatchForm = ({
       reset();
     } catch (error) {
       setErrors(null);
-      setErrors(error.response?.data?.error);
+
+      // Handle specific error response structure
+      if (error.response?.data) {
+        const errorData = error.response.data?.data;
+
+        if (errorData.conflicting_players && errorData.message) {
+          // Get conflicting player names
+          const conflictingPlayerNames = errorData.conflicting_players
+            .map((playerId: number) => {
+              const player = players?.find((p) => p.id === playerId);
+              return player?.name || `Player ID: ${playerId}`;
+            })
+            .join(", ");
+
+          setErrors({
+            message: `${errorData.message} on ${errorData.match_date}`,
+          });
+
+          toast({
+            title: "Error creating match",
+            description: `${errorData.message} on ${errorData.match_date}. Conflicting players: ${conflictingPlayerNames}`,
+            variant: "destructive",
+          });
+        } else {
+          setErrors(error.response);
+          toast({
+            title: "Error creating match",
+            description:
+              errorData.message || "An error occurred while creating the match",
+            variant: "destructive",
+          });
+        }
+      } else {
+        setErrors(error.response?.data?.data);
+        toast({
+          title: "Error creating match",
+          description: "An error occurred while creating the match",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -264,56 +306,31 @@ const NewMatchForm = ({
                     )}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    {...register("date")}
-                    className="bg-background/50 border-border"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="time">Time</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    {...register("time")}
-                    className="bg-background/50 border-border"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="venue">League</Label>
-                  <Controller
-                    name="league"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger className="bg-background/50 border-border">
-                          <SelectValue placeholder="Select away team" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border">
-                          {leagues.map((team) => (
-                            <SelectItem
-                              key={team.id}
-                              value={team.id.toString()}
-                            >
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
               </div>
             </div>
+
+            {/* Error Display */}
+            {errors && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-destructive">Error</h3>
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  {typeof errors === "object" && errors.message && (
+                    <div className="text-destructive font-medium mb-2">
+                      {errors.message}
+                    </div>
+                  )}
+                  {typeof errors === "object" && errors.conflicting_players && (
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Conflicting Players:</strong>{" "}
+                      {errors.conflicting_players}
+                    </div>
+                  )}
+                  {typeof errors === "string" && (
+                    <div className="text-destructive">{errors}</div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Player Selection */}
             <div className="space-y-4">
@@ -436,10 +453,20 @@ const NewMatchForm = ({
             <div className="flex justify-end gap-2">
               <Button
                 onClick={handleCreateMatch}
+                disabled={loading}
                 className="bg-primary hover:bg-primary/90"
               >
-                <Save className="w-4 h-4 mr-2" />
-                Create Match
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating Match...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Create Match
+                  </>
+                )}
               </Button>
             </div>
           </div>

@@ -70,16 +70,27 @@ const UpcomingFixtures = () => {
 
   // Helper to format date
   const formatFixtureDate = (dateStr: string) => {
-    const date = new Date(dateStr.replace(/-/g, "/")); // Safari compatibility
-    return new Intl.DateTimeFormat("en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }).format(date);
+    try {
+      const date = new Date(dateStr);
+
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return "Invalid Date";
+      }
+
+      return new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).format(date);
+    } catch (error) {
+      console.error("Error formatting date:", dateStr, error);
+      return "Invalid Date";
+    }
   };
 
   return (

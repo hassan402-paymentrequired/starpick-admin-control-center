@@ -9,6 +9,10 @@ import {
   FileText,
   Star,
   Swords,
+  Globe,
+  Trophy,
+  Calendar,
+  Target,
 } from "lucide-react";
 
 import {
@@ -29,6 +33,10 @@ const navigationItems = [
   { title: "Teams", url: "/teams", icon: Users },
   { title: "Players", url: "/players", icon: UserRound },
   { title: "Upcoming Fixtures", url: "/fixtures", icon: Star },
+  { title: "Countries", url: "/countries", icon: Globe },
+  { title: "Leagues", url: "/leagues", icon: Trophy },
+  { title: "Seasons", url: "/seasons", icon: Calendar },
+  { title: "Rounds", url: "/rounds", icon: Target },
   { title: "Rooms", url: "/rooms", icon: Home },
   { title: "Match Creation", url: "/match-creation", icon: Swords },
   { title: "Users", url: "/users", icon: User },

@@ -6,8 +6,19 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { RotateCcw } from "lucide-react";
 import api from "@/lib/axios";
+import { useToast } from "@/hooks/use-toast";
 
 interface Fixture {
   id: number;
@@ -34,10 +45,36 @@ interface Fixture {
   score_fulltime_away: number;
 }
 
+interface League {
+  id: number;
+  name: string;
+  external_id: string;
+}
+
+interface Season {
+  id: number;
+  name: string;
+  year: string;
+  editor: boolean;
+}
+
+interface Round {
+  round: number;
+}
+
 const UpcomingFixtures = () => {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState("");
+  const [selectedSeason, setSelectedSeason] = useState("");
+  const [selectedRound, setSelectedRound] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const fetchFixtures = async () => {
     setLoading(true);
@@ -54,17 +91,101 @@ const UpcomingFixtures = () => {
 
   useEffect(() => {
     fetchFixtures();
+    // Fetch leagues for dialog
+    api.get("/admin/leagues").then((res) => {
+      setLeagues(res.data.data?.leagues || res.data);
+    });
   }, []);
 
-  const handleRefetch = async () => {
-    setLoading(true);
-    setError(null);
+  const handleRefetch = () => {
+    setDialogOpen(true);
+  };
+
+  const handleLeagueChange = async (leagueId: string) => {
+    setSelectedLeague(leagueId);
+    setSelectedSeason("");
+    setSelectedRound("");
+    if (leagueId) {
+      try {
+        // Fetch seasons from external API
+        const response = await api.get(
+          `https://www.sofascore.com/api/v1/unique-tournament/${leagueId}/seasons`
+        );
+        const seasonsData = response.data.seasons || [];
+        setSeasons(seasonsData);
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch seasons for this league.",
+          variant: "destructive",
+        });
+        setSeasons([]);
+      }
+    } else {
+      setSeasons([]);
+    }
+    setRounds([]);
+  };
+
+  const handleSeasonChange = async (seasonId: string) => {
+    setSelectedSeason(seasonId);
+    setSelectedRound("");
+    if (seasonId && selectedLeague) {
+      try {
+        // Fetch rounds from external API
+        const response = await api.get(
+          `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${seasonId}/rounds`
+        );
+        const roundsData = response.data.rounds || [];
+        setRounds(roundsData);
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch rounds for this season.",
+          variant: "destructive",
+        });
+        setRounds([]);
+      }
+    } else {
+      setRounds([]);
+    }
+  };
+
+  const handleDialogConfirm = async () => {
+    if (!selectedLeague || !selectedSeason || !selectedRound) return;
+    setIsLoading(true);
+    setDialogOpen(false);
     try {
-      await api.post("/admin/fixtures/refetch");
-      await fetchFixtures();
-    } catch (err) {
-      setError("Failed to refetch fixtures.");
-      setLoading(false);
+      // Fetch fixtures from external API
+      const response = await api.get(
+        `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${selectedSeason}/events/round/${selectedRound}`
+      );
+      console.log(response.data);
+      return;
+      const fixtures = response.data.events || response.data.data?.events || [];
+      // Send fixtures to backend
+      await api.post("/admin/sofa/fixtures", {
+        league_id: selectedLeague,
+        season_id: selectedSeason,
+        round: selectedRound,
+        fixtures,
+      });
+      toast({
+        title: "Fixtures Synced",
+        description: "Successfully synchronized fixtures from external API.",
+      });
+      fetchFixtures();
+    } catch (error) {
+      toast({
+        title: "Sync Error",
+        description: "Failed to sync fixtures from API.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setSelectedLeague("");
+      setSelectedSeason("");
+      setSelectedRound("");
     }
   };
 
@@ -99,14 +220,14 @@ const UpcomingFixtures = () => {
         <h1 className="text-3xl font-bold text-foreground">
           Upcoming Fixtures
         </h1>
-        <button
+        <Button
           onClick={handleRefetch}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-60"
+          className="flex items-center gap-2"
         >
           <RotateCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           {loading ? "Refreshing..." : "Refetch Fixtures"}
-        </button>
+        </Button>
       </div>
       <p className="text-muted-foreground mb-6">
         These are the matches scheduled for the upcoming week.
@@ -182,12 +303,9 @@ const UpcomingFixtures = () => {
                   {fixture.goals_home} - {fixture.goals_away}
                 </span>
               </div>
-              <button
-                className="mt-6 w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold shadow hover:bg-primary/90 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary/50"
-                disabled
-              >
+              <Button className="mt-6 w-full" disabled>
                 More Details (Coming Soon)
-              </button>
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -197,6 +315,89 @@ const UpcomingFixtures = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select League, Season and Round</DialogTitle>
+            <DialogDescription>
+              Please select a league, season and round to fetch fixtures from
+              the external API.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                League
+              </label>
+              <select
+                className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
+                value={selectedLeague}
+                onChange={(e) => handleLeagueChange(e.target.value)}
+              >
+                <option value="">Select League</option>
+                {leagues.map((league) => (
+                  <option key={league.external_id} value={league.external_id}>
+                    {league.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Season
+              </label>
+              <select
+                className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
+                value={selectedSeason}
+                onChange={(e) => handleSeasonChange(e.target.value)}
+                disabled={!selectedLeague}
+              >
+                <option value="">Select Season</option>
+                {seasons.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Round
+              </label>
+              <select
+                className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
+                value={selectedRound}
+                onChange={(e) => setSelectedRound(e.target.value)}
+                disabled={!selectedSeason}
+              >
+                <option value="">Select Round</option>
+                {rounds.map((round) => (
+                  <option key={round.round} value={round.round}>
+                    Round {round.round}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleDialogConfirm}
+              disabled={
+                !selectedLeague ||
+                !selectedSeason ||
+                !selectedRound ||
+                isLoading
+              }
+            >
+              {isLoading ? "Syncing..." : "Sync Fixtures"}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

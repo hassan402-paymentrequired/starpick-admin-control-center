@@ -26,6 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { useFetch } from "@/hooks/useFetch";
 import { Team } from "./Teams";
@@ -60,6 +62,9 @@ const Players = () => {
   const { toast } = useToast();
   const [teams, setTeams] = useState<Team[]>([]);
   const [paginationLinks, setPaginationLinks] = useState([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [syncTeams, setSyncTeams] = useState<Team[]>([]);
+  const [selectedSyncTeam, setSelectedSyncTeam] = useState("");
   // const { data, loading, error, refetch, abort } = useFetch<Player[]>("/admin/players");
   const { patch, errors } = useFormRequest();
   const { data, loading, error, refetch, abort } = useFetch(
@@ -82,6 +87,7 @@ const Players = () => {
     // Fetch teams for filter dropdown
     api.get("/admin/teams").then((res) => {
       setTeams(res.data);
+      setSyncTeams(res.data);
     });
   }, []);
 
@@ -143,15 +149,41 @@ const Players = () => {
 
   // console.log(error);
 
-  const handleSyncPlayers = async () => {
+  const handleSyncPlayers = () => {
+    setDialogOpen(true);
+  };
+
+  const handleDialogConfirm = async () => {
+    if (!selectedSyncTeam) return;
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setDialogOpen(false);
+    try {
+      // Fetch players from external API
+      const response = await api.get(
+        `https://www.sofascore.com/api/v1/team/${selectedSyncTeam}/players`
+      );
+      console.log(response.data.players);
+     
+      // Send players to backend
+      await api.post("/admin/sofa/players", {
+        team_id: selectedSyncTeam,
+        players :response.data.players,
+      });
       toast({
         title: "Players Synced",
         description: "Successfully synchronized players from external API.",
       });
-    }, 2000);
+      refetch();
+    } catch (error) {
+      toast({
+        title: "Sync Error",
+        description: "Failed to sync players from API.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setSelectedSyncTeam("");
+    }
   };
 
   // Get unique teams and positions for filters
@@ -484,6 +516,43 @@ const Players = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Team</DialogTitle>
+            <DialogDescription>
+              Please select a team to sync players from the external API.
+            </DialogDescription>
+          </DialogHeader>
+          <select
+            className="w-full px-3 py-2 rounded border border-input bg-background text-foreground mb-4"
+            value={selectedSyncTeam}
+            onChange={(e) => setSelectedSyncTeam(e.target.value)}
+          >
+            <option value="">Select Team</option>
+            {syncTeams.map((team) => (
+              <option
+                key={team.external_id || team.id}
+                value={team.external_id || team.id}
+              >
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <DialogFooter>
+            <Button
+              onClick={handleDialogConfirm}
+              disabled={!selectedSyncTeam || isLoading}
+            >
+              {isLoading ? "Syncing..." : "Sync Players"}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

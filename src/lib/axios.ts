@@ -3,18 +3,21 @@ import axios from 'axios';
 import { getCookie, removeTokenAndUser } from './cookie';
 import { toast } from 'sonner';
 
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://starpick-server.test/api/v1',
+    baseURL: 'http://starpick-server.test/api/v1',
     headers: {
-        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
     },
+    withCredentials: false
+
 });
 
 // Request interceptor for adding token
 api.interceptors.request.use(
     (config) => {
         const token = getCookie('_token');
-        // console.log(token)
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

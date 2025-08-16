@@ -46,16 +46,162 @@ export type LeagueSelect = {
   id: number;
 };
 
+// External API types
+export type ExternalSeason = {
+  name: string;
+  year: string;
+  editor: boolean;
+  id: number;
+};
+
+export type ExternalRound = {
+  round: number;
+};
+
+export type ExternalFixture = {
+  id: number;
+  awayScore: Record<string, unknown>;
+  awayTeam: {
+    id: number;
+    name: string;
+    shortName: string;
+    slug: string;
+  };
+  homeScore: Record<string, unknown>;
+  homeTeam: {
+    id: number;
+    name: string;
+    shortName: string;
+    slug: string;
+  };
+  startTimestamp: number;
+  status: {
+    code: number;
+    description: string;
+    type: string;
+  };
+  slug: string;
+  tournament: {
+    name: string;
+    slug: string;
+    id: number;
+  };
+  season: {
+    name: string;
+    year: string;
+    id: number;
+  };
+  roundInfo: {
+    round: number;
+  };
+};
+
 const MatchCreateScreen = () => {
-  const [fixtures, setFixtures] = useState([]);
-  const [leagues, setLeagues] = useState([]);
+  const [leagues, setLeagues] = useState<LeagueSelect[]>([]);
+  const [seasons, setSeasons] = useState<ExternalSeason[]>([]);
+  const [rounds, setRounds] = useState<ExternalRound[]>([]);
+  const [fixtures, setFixtures] = useState<ExternalFixture[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState<string>("");
+  const [selectedSeason, setSelectedSeason] = useState<string>("");
+  const [selectedRound, setSelectedRound] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+
+  // Fetch leagues from our backend
   useEffect(() => {
-    api
-      .get("/admin/fixtures/")
-      .then((res) => setFixtures(res.data.data.fixtures));
-    api.get("/admin/match").then((res) => setLeagues(res.data.data.leagues));
+    api.get("/admin/leagues").then((res) => {
+      const leaguesData = res.data.data?.leagues || res.data.leagues || [];
+      setLeagues(
+        leaguesData.map(
+          (league: { external_id?: number; id: number; name: string }) => ({
+            id: league.external_id || league.id,
+            name: league.name,
+          })
+        )
+      );
+    });
   }, []);
-  return <NewMatchForm fixtures={fixtures} leagues={leagues} />;
+
+  // Fetch seasons when league is selected
+  const handleLeagueChange = async (leagueId: string) => {
+    setSelectedLeague(leagueId);
+    setSelectedSeason("");
+    setSelectedRound("");
+    setSeasons([]);
+    setRounds([]);
+    setFixtures([]);
+
+    if (!leagueId) return;
+
+    try {
+      setLoading(true);
+      const response = await api.get(
+        `https://www.sofascore.com/api/v1/unique-tournament/${leagueId}/seasons`
+      );
+      setSeasons(response.data.seasons || []);
+    } catch (error) {
+      console.error("Error fetching seasons:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch rounds when season is selected
+  const handleSeasonChange = async (seasonId: string) => {
+    setSelectedSeason(seasonId);
+    setSelectedRound("");
+    setRounds([]);
+    setFixtures([]);
+
+    if (!selectedLeague || !seasonId) return;
+
+    try {
+      setLoading(true);
+      const response = await api.get(
+        `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${seasonId}/rounds`
+      );
+      setRounds(response.data.rounds || []);
+    } catch (error) {
+      console.error("Error fetching rounds:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch fixtures when round is selected
+  const handleRoundChange = async (round: string) => {
+    setSelectedRound(round);
+    setFixtures([]);
+
+    if (!selectedLeague || !selectedSeason || !round) return;
+
+    try {
+      setLoading(true);
+      const response = await api.get(
+        `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${selectedSeason}/events/round/${round}`
+      );
+      setFixtures(response.data.events || []);
+    } catch (error) {
+      console.error("Error fetching fixtures:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <NewMatchForm
+      leagues={leagues}
+      seasons={seasons}
+      rounds={rounds}
+      fixtures={fixtures}
+      selectedLeague={selectedLeague}
+      selectedSeason={selectedSeason}
+      selectedRound={selectedRound}
+      onLeagueChange={handleLeagueChange}
+      onSeasonChange={handleSeasonChange}
+      onRoundChange={handleRoundChange}
+      loading={loading}
+    />
+  );
 };
 
 export default MatchCreateScreen;

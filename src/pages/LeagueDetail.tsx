@@ -59,7 +59,9 @@ const LeagueDetail = () => {
     try {
       // Fetch league details
       const leagueRes = await api.get(`/admin/leagues/${leagueId}`);
-      setLeague(leagueRes.data.data || leagueRes.data);
+      setLeague(leagueRes.data.data?.league || leagueRes.data?.league);
+
+      console.log(leagueRes)
 
       // Fetch current season
       const seasonRes = await api.get(`/admin/leagues/season/${leagueId}`);
@@ -73,8 +75,8 @@ const LeagueDetail = () => {
       }
 
       // Fetch teams in the league
-      const teamsRes = await api.get(`/admin/leagues/${leagueId}/teams`);
-      setTeams(teamsRes.data.data?.teams || teamsRes.data.teams || []);
+      // const teamsRes = await api.get(`/admin/leagues/${leagueId}/teams`);
+      // setTeams(teamsRes.data.data?.teams || teamsRes.data.teams || []);
     } catch (err) {
       setError("Failed to load league details.");
       toast({
@@ -82,6 +84,7 @@ const LeagueDetail = () => {
         description: "Failed to load league details.",
         variant: "destructive",
       });
+      console.log(err)
     } finally {
       setLoading(false);
     }

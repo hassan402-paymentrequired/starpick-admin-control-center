@@ -52,7 +52,7 @@ const ManageLeagues = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogCountry, setDialogCountry] = useState<number | null>(null);
+  const [dialogCountry, setDialogCountry] = useState<string | null>(null);
 
   const fetchCountries = async () => {
     try {
@@ -71,6 +71,7 @@ const ManageLeagues = () => {
     try {
       const res = await api.get(`/admin/leagues`);
       setLeagues(res.data.data?.leagues || []);
+      console.log(res.data)
     } catch (err) {
       setLeagues([]);
       setError("Failed to load leagues from backend.");
@@ -79,37 +80,19 @@ const ManageLeagues = () => {
     }
   };
 
-  const fetchLeagues = async (countryId: number) => {
+  const fetchLeagues = async (countryId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(
-        `https://www.sofascore.com/api/v1/category/${countryId}/unique-tournaments`
+      const response = await api.post(
+        `/admin/leagues/refetch/`,
+          {country_id: countryId}
       );
-      const leagues = response.data.groups[0].uniqueTournaments || [];
-      setLeagues(leagues);
       toast({
         title: "Success",
         description: "Fetched leagues from external API!",
       });
-      // Send leagues to backend
-      try {
-        await api.post("/admin/sofa/leagues", {
-          country_id: countryId,
-          leagues: leagues,
-        });
-        toast({
-          title: "Backend Import Success",
-          description: "Leagues sent to the server successfully!",
-        });
-      } catch (backendError) {
-        console.error(backendError);
-        toast({
-          title: "Backend Import Error",
-          description: "Failed to import leagues to backend",
-          variant: "destructive",
-        });
-      }
+      fetchLeaguesFromBackend()
     } catch (error) {
       setLeagues([]);
       toast({
@@ -239,11 +222,11 @@ const ManageLeagues = () => {
           <select
             className="w-full px-3 py-2 rounded border border-input bg-background text-foreground mb-4"
             value={dialogCountry ?? ""}
-            onChange={(e) => setDialogCountry(Number(e.target.value))}
+            onChange={(e) => setDialogCountry(e.target.value)}
           >
             <option value="">Select Country</option>
             {countries.map((country) => (
-              <option key={country.id} value={country.id}>
+              <option key={country.id} value={country.name}>
                 {country.name}
               </option>
             ))}
@@ -305,7 +288,7 @@ const ManageLeagues = () => {
                   className="data-[state=checked]:bg-primary"
                 />
               </div>
-              <CardDescription>League ID: {league.id}</CardDescription>
+              <CardDescription>Season: {league.seasons[0].year}</CardDescription>
               <div className="mt-4">
                 <Link to={`/leagues/${league.id}`}>
                   <Button variant="outline" size="sm" className="w-full">

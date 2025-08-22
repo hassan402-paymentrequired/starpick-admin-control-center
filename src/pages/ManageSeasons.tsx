@@ -61,12 +61,14 @@ const ManageSeasons = () => {
     try {
       const res = await api.get("/admin/leagues");
       setLeagues(res.data.data?.leagues || res.data.leagues || []);
+      // console.log(res)
     } catch (err) {
       toast({
         title: "Error",
         description: "Failed to load leagues.",
         variant: "destructive",
       });
+      // console.log(err)
     }
   };
 

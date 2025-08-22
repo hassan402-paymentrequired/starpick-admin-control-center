@@ -91,7 +91,6 @@ const UpcomingFixtures = () => {
 
   useEffect(() => {
     fetchFixtures();
-    // Fetch leagues for dialog
     api.get("/admin/leagues").then((res) => {
       setLeagues(res.data.data?.leagues || res.data);
     });
@@ -152,29 +151,11 @@ const UpcomingFixtures = () => {
   };
 
   const handleDialogConfirm = async () => {
-    if (!selectedLeague || !selectedSeason || !selectedRound) return;
     setIsLoading(true);
     setDialogOpen(false);
     try {
-      // Fetch fixtures from external API
-      const response = await api.get(
-        `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${selectedSeason}/events/round/${selectedRound}`
-      );
-      console.log(response.data);
-      return;
-      const fixtures = response.data.events || response.data.data?.events || [];
-      // Send fixtures to backend
-      await api.post("/admin/sofa/fixtures", {
-        league_id: selectedLeague,
-        season_id: selectedSeason,
-        round: selectedRound,
-        fixtures,
-      });
-      toast({
-        title: "Fixtures Synced",
-        description: "Successfully synchronized fixtures from external API.",
-      });
-      fetchFixtures();
+     await api.post("/admin/fixtures/refetch")
+      await  fetchFixtures();
     } catch (error) {
       toast({
         title: "Sync Error",

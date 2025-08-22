@@ -79,8 +79,8 @@ const Players = () => {
       setTotalPages(data?.data?.players?.last_page ?? 1);
       setTotalPlayers(data?.data?.players?.total ?? playerList.length);
       setPaginationLinks(data?.data?.players?.links ?? []);
+    console.log(playerList);
     }
-    console.log(data);
   }, [data, currentPage]);
 
   useEffect(() => {
@@ -101,12 +101,12 @@ const Players = () => {
     const filtered = players.filter((player) => {
       const matchesSearch =
         player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        player?.team?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         player.position.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPosition =
         selectedPosition === "all" || player.position === selectedPosition;
       const matchesTeam =
-        selectedTeam === "all" || player.team.id === selectedTeam;
+        selectedTeam === "all" || player?.team?.id === selectedTeam;
       const matchesRating =
         selectedRating === "all" ||
         player.player_rating === Number(selectedRating);
@@ -159,21 +159,16 @@ const Players = () => {
     setDialogOpen(false);
     try {
       // Fetch players from external API
-      const response = await api.get(
-        `https://www.sofascore.com/api/v1/team/${selectedSyncTeam}/players`
+      const response = await api.post(
+        `/admin/players/refetch`,
+          {league: selectedSyncTeam}
       );
-      console.log(response.data.players);
-     
-      // Send players to backend
-      await api.post("/admin/sofa/players", {
-        team_id: selectedSyncTeam,
-        players :response.data.players,
-      });
+      console.log(response.data);
+      refetch();
       toast({
         title: "Players Synced",
         description: "Successfully synchronized players from external API.",
       });
-      refetch();
     } catch (error) {
       toast({
         title: "Sync Error",
@@ -310,7 +305,7 @@ const Players = () => {
                       </Badge>
                     </div>
                     <div className="text-sm font-medium text-foreground">
-                      {player?.team.name}
+                      {player?.team?.name}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {player.nationality}
@@ -350,7 +345,7 @@ const Players = () => {
                         <div>
                           <span className="text-muted-foreground">Team:</span>
                           <p className="font-medium text-foreground">
-                            {player?.team.name}
+                            {player?.team?.name}
                           </p>
                         </div>
                         <div>
@@ -533,8 +528,8 @@ const Players = () => {
             <option value="">Select Team</option>
             {syncTeams.map((team) => (
               <option
-                key={team.external_id || team.id}
-                value={team.external_id || team.id}
+                key={team.external_id}
+                value={team.external_id}
               >
                 {team.name}
               </option>

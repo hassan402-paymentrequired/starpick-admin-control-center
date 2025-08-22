@@ -100,26 +100,6 @@ const NewMatchForm = ({
     setValue("playerIds", newPlayers);
   };
 
-  const filteredPlayers = players?.filter((player) => {
-    // Filter by search query only - show all players from both teams
-    return (
-      player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      player.position.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
-  const getTeamPlayer = async (teamId: string) => {
-    if (!teamId) return;
-    const res = await get(`/admin/teams/${teamId}/players`);
-
-    // Handle both paginated and non-paginated responses
-    const playersData =
-      res.data.data?.players?.data ||
-      res.data.data?.players ||
-      res.data.players ||
-      [];
-    setplayers(playersData);
-  };
 
   const getBothTeamsPlayers = async (
     homeTeamId: string,
@@ -292,7 +272,6 @@ const NewMatchForm = ({
     }).format(date);
   };
 
-  console.log(errors);
   return (
     <div className="max-w-4xl mx-auto py-8">
       <Card>

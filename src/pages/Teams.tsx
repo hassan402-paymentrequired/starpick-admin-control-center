@@ -52,13 +52,13 @@ const Teams = () => {
     useFetch<Team[]>("/admin/teams");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [leagues, setLeagues] = useState([]);
-  const [seasons, setSeasons] = useState([]);
+  const [seasons, setSeasons] = useState<never[] | null>([]);
   const [selectedLeague, setSelectedLeague] = useState("");
   const [selectedSeason, setSelectedSeason] = useState("");
 
   useEffect(() => {
-    // console.log(data);
     if (data) {
+      // console.log(data)
       setTeams(data);
       setFilteredTeams(data);
     }
@@ -66,25 +66,11 @@ const Teams = () => {
 
   useEffect(() => {
     api
-      .get("/admin/leagues")
+      .get("/admin/leagues?status=1")
       .then((res) =>
         setLeagues(res.data.data?.leagues || res.data.leagues || [])
       );
   }, []);
-
-  useEffect(() => {
-    if (selectedLeague) {
-      api
-        .get(`/admin/seasons?league_id=${selectedLeague}`)
-        .then((res) =>
-          setSeasons(res.data.data?.seasons || res.data.seasons || [])
-        );
-    } else {
-      setSeasons([]);
-    }
-  }, [selectedLeague]);
-
-  console.log(data);
 
   // Filter teams based on search query
   useEffect(() => {
@@ -126,22 +112,16 @@ const Teams = () => {
   };
 
   const handleDialogConfirm = async () => {
-    if (!selectedLeague || !selectedSeason) return;
+    if (!selectedLeague) return;
     setIsLoading(true);
     setDialogOpen(false);
     try {
       // Fetch teams from external API
       const response = await axios.get(
-        `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${selectedSeason}/standings/total`
+        `/admin/teams/refetch/${selectedLeague}`
       );
-      const teams = response.data.standings[0].rows;
-      
-      // Send teams to backend
-      await api.post("/admin/sofa/teams", {
-        league_id: selectedLeague,
-        season_id: selectedSeason,
-        rows: teams,
-      });
+      console.log(response)
+
       toast({
         title: "Teams Synced",
         description: "Successfully synchronized teams from external API.",
@@ -228,7 +208,7 @@ const Teams = () => {
               <CardHeader className="text-center pb-2">
                 <div className="w-16 h-16 mx-auto mb-3 bg-background/50 rounded-full flex items-center justify-center overflow-hidden">
                   <img
-                    src={`https://img.sofascore.com/api/v1/team/${team.external_id}/image`}
+                    src={team.logo}
                     alt={team.name}
                     className="w-12 h-12 object-contain"
                     onError={(e) => {
@@ -356,29 +336,17 @@ const Teams = () => {
             onChange={(e) => setSelectedLeague(e.target.value)}
           >
             <option value="">Select League</option>
-            {leagues.map((league) => (
-              <option key={league.external_id} value={league.external_id}>
+            {leagues.map((league, i) => (
+              <option key={i} value={league.id}>
                 {league.name}
               </option>
             ))}
           </select>
-          <select
-            className="w-full px-3 py-2 rounded border border-input bg-background text-foreground mb-4"
-            value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value)}
-            disabled={!selectedLeague}
-          >
-            <option value="">Select Season</option>
-            {seasons.map((season) => (
-              <option key={season.external_id} value={season.external_id}>
-                {season.name} ({season.year})
-              </option>
-            ))}
-          </select>
+
           <DialogFooter>
             <Button
               onClick={handleDialogConfirm}
-              disabled={!selectedLeague || !selectedSeason || isLoading}
+              disabled={!selectedLeague || isLoading}
             >
               {isLoading ? "Syncing..." : "Sync Teams"}
             </Button>

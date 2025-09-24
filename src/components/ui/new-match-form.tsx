@@ -30,28 +30,17 @@ type matchForm = {
 };
 
 const NewMatchForm = ({
-  leagues,
-  seasons,
-  rounds,
   fixtures,
   selectedLeague,
   selectedSeason,
   selectedRound,
-  onLeagueChange,
-  onSeasonChange,
-  onRoundChange,
   loading,
 }: {
   leagues: LeagueSelect[];
-  seasons: ExternalSeason[];
-  rounds: ExternalRound[];
   fixtures: ExternalFixture[];
   selectedLeague: string;
   selectedSeason: string;
   selectedRound: string;
-  onLeagueChange: (leagueId: string) => void;
-  onSeasonChange: (seasonId: string) => void;
-  onRoundChange: (round: string) => void;
   loading: boolean;
 }) => {
   const [players, setplayers] = useState<Player[] | null>(null);
@@ -87,7 +76,7 @@ const NewMatchForm = ({
     const selectedPlayers = getValues("playerIds") || [];
     if (selectedPlayers.includes(player.id)) return;
     const newPlayers = [...selectedPlayers, player.id];
-    console.log(newPlayers);
+
     setValue("playerIds", newPlayers);
   };
 
@@ -96,10 +85,16 @@ const NewMatchForm = ({
     const newPlayers = selectedPlayers.filter(
       (id) => id.toString() !== playerId.toString()
     );
-    console.log(newPlayers);
     setValue("playerIds", newPlayers);
   };
 
+    const filteredPlayers = players?.filter((player) => {
+        // Filter by search query only - show all players from both teams
+        return (
+            player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            player.position.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
   const getBothTeamsPlayers = async (
     homeTeamId: string,
@@ -125,15 +120,15 @@ const NewMatchForm = ({
       [];
     setAwayTeamPlayers(awayPlayersData);
 
-    console.log(homeRes, awayRes);
+    // console.log(homeRes, awayRes);
 
     // Combine both teams' players
     const allPlayers = [...homePlayersData, ...awayPlayersData];
     setplayers(allPlayers);
 
     // Check if either team has no players
-    const homeTeamName = selectedFixture?.homeTeam.name || "Home Team";
-    const awayTeamName = selectedFixture?.awayTeam.name || "Away Team";
+    const homeTeamName = selectedFixture?.home_team_name || "Home Team";
+    const awayTeamName = selectedFixture?.away_team_name || "Away Team";
 
     if (homePlayersData.length === 0 && awayPlayersData.length === 0) {
       toast({
@@ -160,11 +155,11 @@ const NewMatchForm = ({
     const fixture = fixtures.find((f) => f.id.toString() === fixtureId);
     if (fixture) {
       setSelectedFixture(fixture);
-      setValue("playingTeam", fixture.homeTeam.id.toString());
-      setValue("againstTeam", fixture.awayTeam.id.toString());
+      setValue("playingTeam", fixture.home_team_id.toString());
+      setValue("againstTeam", fixture.away_team_id.toString());
       getBothTeamsPlayers(
-        fixture.homeTeam.id.toString(),
-        fixture.awayTeam.id.toString()
+        fixture.home_team_id.toString(),
+        fixture.away_team_id.toString()
       );
     }
   };
@@ -184,8 +179,8 @@ const NewMatchForm = ({
       // If player is from home team, they play against away team
       // If player is from away team, they play against home team
       const againstTeam = isHomeTeamPlayer
-        ? selectedFixture?.awayTeam.id
-        : selectedFixture?.homeTeam.id;
+        ? selectedFixture?.away_team_id
+        : selectedFixture?.home_team_id;
 
       return {
         playerId: parseInt(playerId),
@@ -196,15 +191,10 @@ const NewMatchForm = ({
 
     const real_payload = {
       matches: payload,
-      fixture_id: selectedFixture?.id,
-      fixture: selectedFixture,
-      league_id: selectedLeague,
-      season_id: selectedSeason,
-      round: selectedRound,
+      fixture_id: selectedFixture?.external_id,
+      fixture: selectedFixture
     };
 
-    console.log(real_payload);
-    // return;
 
     try {
       const res = await post(`/admin/match/create-from-fixture`, real_payload);
@@ -217,6 +207,7 @@ const NewMatchForm = ({
       reset();
     } catch (error) {
       setErrors(null);
+      console.log(error?.response)
 
       // Handle specific error response structure
       if (error.response?.data) {
@@ -232,7 +223,7 @@ const NewMatchForm = ({
             .join(", ");
 
           setErrors({
-            message: `${errorData.message} on ${errorData.match_date}`,
+            message: `${errorData?.message} on ${errorData?.match_date}`,
           });
 
           toast({
@@ -260,8 +251,8 @@ const NewMatchForm = ({
     }
   };
 
-  const formatFixtureDate = (timestamp: number) => {
-    const date = new Date(timestamp * 1000);
+  const formatFixtureDate = (timestamp: string) => {
+    const date = new Date(timestamp);
     return new Intl.DateTimeFormat("en-US", {
       weekday: "short",
       year: "numeric",
@@ -271,7 +262,7 @@ const NewMatchForm = ({
       minute: "2-digit",
     }).format(date);
   };
-
+console.log(fixtures)
   return (
     <div className="max-w-4xl mx-auto py-8">
       <Card>
@@ -281,79 +272,7 @@ const NewMatchForm = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {/* League, Season, Round Selection */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-foreground">
-                Select League, Season & Round
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="league">League</Label>
-                  <Select onValueChange={onLeagueChange} value={selectedLeague}>
-                    <SelectTrigger className="bg-background/50 border-border">
-                      <SelectValue placeholder="Select a league" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {leagues.map((league) => (
-                        <SelectItem
-                          key={league.id}
-                          value={league.id.toString()}
-                        >
-                          {league.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="season">Season</Label>
-                  <Select
-                    onValueChange={onSeasonChange}
-                    value={selectedSeason}
-                    disabled={!selectedLeague}
-                  >
-                    <SelectTrigger className="bg-background/50 border-border">
-                      <SelectValue placeholder="Select a season" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {seasons.map((season) => (
-                        <SelectItem
-                          key={season.id}
-                          value={season.id.toString()}
-                        >
-                          {season.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="round">Round</Label>
-                  <Select
-                    onValueChange={onRoundChange}
-                    value={selectedRound}
-                    disabled={!selectedSeason}
-                  >
-                    <SelectTrigger className="bg-background/50 border-border">
-                      <SelectValue placeholder="Select a round" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {rounds.map((round) => (
-                        <SelectItem
-                          key={round.round}
-                          value={round.round.toString()}
-                        >
-                          Round {round.round}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+          <div className="space-y-3">
 
             {/* Loading State */}
             {loading && (
@@ -364,11 +283,9 @@ const NewMatchForm = ({
             )}
 
             {/* Fixture Selection */}
-            {fixtures.length > 0 && (
+            {/*{fixtures?.length > 0 && (*/}
               <div className="space-y-4">
-                <h3 className="font-semibold text-foreground">
-                  Select Fixture
-                </h3>
+
                 <div className="space-y-2">
                   <Label htmlFor="fixture">Available Fixtures</Label>
                   <Select onValueChange={handleFixtureSelect}>
@@ -376,20 +293,20 @@ const NewMatchForm = ({
                       <SelectValue placeholder="Select a fixture" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
-                      {fixtures.map((fixture) => (
+                      {fixtures?.map((fixture) => (
                         <SelectItem
                           key={fixture.id}
                           value={fixture.id.toString()}
                         >
-                          {fixture.homeTeam.name} vs {fixture.awayTeam.name} (
-                          {formatFixtureDate(fixture.startTimestamp)})
+                          {fixture.home_team_name} vs {fixture.away_team_name} (
+                          {formatFixtureDate(fixture.date)})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-            )}
+            {/*// )}*/}
 
             {/* Match Details */}
             {selectedFixture && (
@@ -413,10 +330,10 @@ const NewMatchForm = ({
                           <SelectContent className="bg-popover border-border">
                             {selectedFixture && (
                               <SelectItem
-                                key={selectedFixture.homeTeam.id}
-                                value={selectedFixture.homeTeam.id.toString()}
+                                key={selectedFixture.home_team_id}
+                                value={selectedFixture.home_team_id.toString()}
                               >
-                                {selectedFixture.homeTeam.name}
+                                {selectedFixture.home_team_name}
                               </SelectItem>
                             )}
                           </SelectContent>
@@ -442,10 +359,10 @@ const NewMatchForm = ({
                           <SelectContent className="bg-popover border-border">
                             {selectedFixture && (
                               <SelectItem
-                                key={selectedFixture.awayTeam.id}
-                                value={selectedFixture.awayTeam.id.toString()}
+                                key={selectedFixture.away_team_id}
+                                value={selectedFixture.away_team_id.toString()}
                               >
-                                {selectedFixture.awayTeam.name}
+                                {selectedFixture.away_team_name}
                               </SelectItem>
                             )}
                           </SelectContent>
@@ -467,10 +384,10 @@ const NewMatchForm = ({
                       {errors.message}
                     </div>
                   )}
-                  {typeof errors === "object" && errors.conflicting_players && (
+                  {typeof errors === "object" && errors?.conflicting_players && (
                     <div className="text-sm text-muted-foreground">
                       <strong>Conflicting Players:</strong>{" "}
-                      {errors.conflicting_players}
+                      {errors?.conflicting_players}
                     </div>
                   )}
                   {typeof errors === "string" && (
@@ -517,22 +434,22 @@ const NewMatchForm = ({
                               awayTeamPlayers &&
                               awayTeamPlayers.length === 0
                                 ? `Neither ${
-                                    selectedFixture?.homeTeam.name ||
+                                    selectedFixture?.home_team_name ||
                                     "Home Team"
                                   } nor ${
-                                    selectedFixture?.awayTeam.name ||
+                                    selectedFixture?.away_team_name ||
                                     "Away Team"
                                   } have players registered in our system. Please register both teams and their players first before creating a match.`
                                 : homeTeamPlayers &&
                                   homeTeamPlayers.length === 0
                                 ? `${
-                                    selectedFixture?.homeTeam.name ||
+                                    selectedFixture?.home_team_name ||
                                     "Home Team"
                                   } has no players registered in our system. Please register this team and their players first before creating a match.`
                                 : awayTeamPlayers &&
                                   awayTeamPlayers.length === 0
                                 ? `${
-                                    selectedFixture?.awayTeam.name ||
+                                    selectedFixture?.away_team_name ||
                                     "Away Team"
                                   } has no players registered in our system. Please register this team and their players first before creating a match.`
                                 : "The selected teams have no players registered in our system. Please register the teams and their players first before creating a match."}
@@ -548,8 +465,8 @@ const NewMatchForm = ({
                           (hp) => hp.id === player.id
                         );
                         const teamName = isHomeTeamPlayer
-                          ? selectedFixture?.homeTeam.name
-                          : selectedFixture?.awayTeam.name;
+                          ? selectedFixture?.home_team_name
+                          : selectedFixture?.away_team_name;
                         const teamBadgeColor = isHomeTeamPlayer
                           ? "bg-blue-100 text-blue-800"
                           : "bg-red-100 text-red-800";
@@ -561,7 +478,7 @@ const NewMatchForm = ({
                           >
                             <div>
                               <div className="font-medium text-foreground">
-                                {player.name}
+                                {player.name} {player.player_rating}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {player.position}
@@ -641,7 +558,7 @@ const NewMatchForm = ({
             <div className="flex justify-end gap-2">
               <Button
                 onClick={handleCreateMatch}
-                disabled={formLoading || !selectedFixture}
+                // disabled={formLoading || !selectedFixture}
                 className="bg-primary hover:bg-primary/90"
               >
                 {formLoading ? (

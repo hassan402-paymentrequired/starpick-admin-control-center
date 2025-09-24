@@ -24,6 +24,7 @@ import ManageLeagues from "./pages/ManageLeagues";
 import ManageSeasons from "./pages/ManageSeasons";
 import ManageRounds from "./pages/ManageRounds";
 import LeagueDetail from "./pages/LeagueDetail";
+import ManageTournament from "@/pages/ManageTournament.tsx";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/teams" element={<Teams />} />
             <Route path="/players" element={<Players />} />
             <Route path="/rooms" element={<Rooms />} />
+            <Route path="/tournament" element={<ManageTournament />} />
             <Route path="/rooms/:id" element={<RoomDetails />} />
             <Route path="/matches" element={<AllMatches />} />
             <Route path="/match-creation" element={<AllMatches />} />

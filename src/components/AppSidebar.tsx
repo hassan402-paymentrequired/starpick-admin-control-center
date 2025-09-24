@@ -4,15 +4,11 @@ import {
   LayoutDashboard,
   Users,
   UserRound,
-  Home,
   User,
-  FileText,
   Star,
   Swords,
   Globe,
-  Trophy,
-  Calendar,
-  Target,
+  Trophy
 } from "lucide-react";
 
 import {
@@ -35,12 +31,12 @@ const navigationItems = [
   { title: "Upcoming Fixtures", url: "/fixtures", icon: Star },
   { title: "Countries", url: "/countries", icon: Globe },
   { title: "Leagues", url: "/leagues", icon: Trophy },
-  { title: "Seasons", url: "/seasons", icon: Calendar },
-  { title: "Rounds", url: "/rounds", icon: Target },
-  { title: "Rooms", url: "/rooms", icon: Home },
-  { title: "Match Creation", url: "/match-creation", icon: Swords },
+  // { title: "Seasons", url: "/seasons", icon: Calendar },
+  { title: "Tournament", url: "/tournament", icon: Swords },
+  { title: "Peers", url: "/rooms", icon: Users },
+  { title: "Matches", url: "/match-creation", icon: Swords },
   { title: "Users", url: "/users", icon: User },
-  { title: "Sync Logs", url: "/sync-logs", icon: FileText },
+  // { title: "Sync Logs", url: "/sync-logs", icon: FileText },
 ];
 
 export function AppSidebar() {

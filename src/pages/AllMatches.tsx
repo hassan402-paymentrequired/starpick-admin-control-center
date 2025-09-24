@@ -29,7 +29,7 @@ type Match = {
   updated_at: string;
   player: Player;
   team: Team;
-  league: League;
+  [key]: unknown;
 };
 
 type LeagueMatch = {
@@ -38,12 +38,11 @@ type LeagueMatch = {
 
 const AllMatches = () => {
   const [matches, setMatches] = useState<LeagueMatch[]>([]);
-  const { toast } = useToast();
   const { data, loading, error, refetch, abort } = useFetch("/admin/match");
 
   useEffect(() => {
     if (data) {
-      setMatches(data?.data?.matches || []);
+      setMatches(data?.data?.matches[0] || []);
     }
   }, [data]);
 
@@ -104,7 +103,7 @@ const AllMatches = () => {
                             <CardTitle className="text-lg text-foreground">
                               {match.player.name} vs {match.team?.name}
                             </CardTitle>
-                            <Badge variant="outline">{match.league.name}</Badge>
+                            <Badge variant="outline">{match.fixture.league.name}</Badge>
                           </div>
                           <CardDescription className="space-y-1">
                             <div className="flex items-center gap-2">

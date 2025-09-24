@@ -2,10 +2,11 @@
 import axios from 'axios';
 import { getCookie, removeTokenAndUser } from './cookie';
 import { toast } from 'sonner';
+import * as process from "node:process";
 
 
 const api = axios.create({
-    baseURL: 'http://starpick-server.test/api/v1',
+    baseURL:  'https://star.test/api/v1',
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

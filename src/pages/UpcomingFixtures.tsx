@@ -68,8 +68,6 @@ const UpcomingFixtures = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [rounds, setRounds] = useState<Round[]>([]);
   const [selectedLeague, setSelectedLeague] = useState("");
   const [selectedSeason, setSelectedSeason] = useState("");
   const [selectedRound, setSelectedRound] = useState("");
@@ -100,61 +98,14 @@ const UpcomingFixtures = () => {
     setDialogOpen(true);
   };
 
-  const handleLeagueChange = async (leagueId: string) => {
-    setSelectedLeague(leagueId);
-    setSelectedSeason("");
-    setSelectedRound("");
-    if (leagueId) {
-      try {
-        // Fetch seasons from external API
-        const response = await api.get(
-          `https://www.sofascore.com/api/v1/unique-tournament/${leagueId}/seasons`
-        );
-        const seasonsData = response.data.seasons || [];
-        setSeasons(seasonsData);
-      } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch seasons for this league.",
-          variant: "destructive",
-        });
-        setSeasons([]);
-      }
-    } else {
-      setSeasons([]);
-    }
-    setRounds([]);
-  };
-
-  const handleSeasonChange = async (seasonId: string) => {
-    setSelectedSeason(seasonId);
-    setSelectedRound("");
-    if (seasonId && selectedLeague) {
-      try {
-        // Fetch rounds from external API
-        const response = await api.get(
-          `https://www.sofascore.com/api/v1/unique-tournament/${selectedLeague}/season/${seasonId}/rounds`
-        );
-        const roundsData = response.data.rounds || [];
-        setRounds(roundsData);
-      } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch rounds for this season.",
-          variant: "destructive",
-        });
-        setRounds([]);
-      }
-    } else {
-      setRounds([]);
-    }
-  };
 
   const handleDialogConfirm = async () => {
     setIsLoading(true);
     setDialogOpen(false);
     try {
-     await api.post("/admin/fixtures/refetch")
+     await api.post("/admin/fixtures/refetch", {
+         league: selectedLeague
+     })
       await  fetchFixtures();
     } catch (error) {
       toast({
@@ -165,8 +116,7 @@ const UpcomingFixtures = () => {
     } finally {
       setIsLoading(false);
       setSelectedLeague("");
-      setSelectedSeason("");
-      setSelectedRound("");
+
     }
   };
 
@@ -314,7 +264,7 @@ const UpcomingFixtures = () => {
               <select
                 className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
                 value={selectedLeague}
-                onChange={(e) => handleLeagueChange(e.target.value)}
+                onChange={(e) => setSelectedLeague(e.target.value)}
               >
                 <option value="">Select League</option>
                 {leagues.map((league) => (
@@ -324,50 +274,14 @@ const UpcomingFixtures = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Season
-              </label>
-              <select
-                className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
-                value={selectedSeason}
-                onChange={(e) => handleSeasonChange(e.target.value)}
-                disabled={!selectedLeague}
-              >
-                <option value="">Select Season</option>
-                {seasons.map((season) => (
-                  <option key={season.id} value={season.id}>
-                    {season.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Round
-              </label>
-              <select
-                className="w-full px-3 py-2 rounded border border-input bg-background text-foreground"
-                value={selectedRound}
-                onChange={(e) => setSelectedRound(e.target.value)}
-                disabled={!selectedSeason}
-              >
-                <option value="">Select Round</option>
-                {rounds.map((round) => (
-                  <option key={round.round} value={round.round}>
-                    Round {round.round}
-                  </option>
-                ))}
-              </select>
-            </div>
+
+
           </div>
           <DialogFooter>
             <Button
               onClick={handleDialogConfirm}
               disabled={
                 !selectedLeague ||
-                !selectedSeason ||
-                !selectedRound ||
                 isLoading
               }
             >

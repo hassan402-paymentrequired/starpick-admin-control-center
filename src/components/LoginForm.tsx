@@ -15,6 +15,7 @@ import InputError from "./ui/error";
 import { setCookie,setTokenAndUser } from "@/lib/cookie";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import {Loader} from "lucide-react";
 
 type LoginRequest = {
   email: string;
@@ -29,24 +30,30 @@ export function LoginForm({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors: formError },
   } = useForm<LoginRequest>();
   const { post, errors, data, loading, setErrors } = useFormRequest();
 
   const onSubmit: SubmitHandler<LoginRequest> = async (data) => {
     try {
-      const res = await post("/auth/admin/login", data);
+      const res = await post("/admin/login", data);
       setTokenAndUser(res.data.token, res.data.user);
       toast("Login successful");
       navigate("/dashboard");
     } catch (error) {
       setErrors(null);
-      setErrors(error.response?.data?.error);
+      // console.log(error.response)
+      setErrors(error.response?.data?.errors);
+      if(error.response.data.message) {
+          toast(error.response.data.message);
+      }
+      if(error.response.data.response_message) {
+        toast(error.response.data.response_message);
+      }
     }
   };
 
-  console.log(errors);
+  // console.log(errors);
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -91,19 +98,12 @@ export function LoginForm({
               </div>
               <div className="flex flex-col gap-3">
                 <Button type="submit" disabled={loading} className="w-full">
-                  Login
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Login with Google
+                  {loading && <Loader className="animate-spin text-white" />}  Login
                 </Button>
               </div>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <a href="#" className="underline underline-offset-4">
-                Sign up
-              </a>
-            </div>
+
+
           </form>
         </CardContent>
       </Card>

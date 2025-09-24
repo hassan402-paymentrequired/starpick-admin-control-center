@@ -150,6 +150,11 @@ const ManageLeagues = () => {
     }
   };
 
+  const getSeason = (seasons: string) => {
+    const season = JSON.parse(seasons);
+    return season.year;
+  }
+
   // Filtering logic
   const filteredLeagues = leagues.filter((league) => {
     const matchesCountry = countryFilter
@@ -288,7 +293,7 @@ const ManageLeagues = () => {
                   className="data-[state=checked]:bg-primary"
                 />
               </div>
-              <CardDescription>Season: {league.seasons[0].year}</CardDescription>
+              <CardDescription>Season: {getSeason(league.current_season)}</CardDescription>
               <div className="mt-4">
                 <Link to={`/leagues/${league.id}`}>
                   <Button variant="outline" size="sm" className="w-full">

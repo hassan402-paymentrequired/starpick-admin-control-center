@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Button} from "@/components/ui/button.tsx";
 import {Download, Loader, RotateCcw} from "lucide-react";
 import {
@@ -14,15 +14,30 @@ import api from "@/lib/axios.ts";
 import {useForm} from "react-hook-form";
 import {useToast} from "@/hooks/use-toast.ts";
 import {Input} from "@/components/ui/input.tsx";
+import {useFetch} from "@/hooks/useFetch.ts";
 
 const ManageTournament = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
+    const [tournaments, setTournaments] = useState([]);
+    const { data: res, loading, error, refetch } = useFetch("/admin/tournament");
     const [data, setData] = useState({
         name: '',
         amount: ''
     });
+
+
+    useEffect(() => {
+        if (res) {
+            setTournaments(res?.data?.tournaments.data || []);
+        }
+    }, [res]);
+
+console.log(tournaments)
+
+    if (loading) return <div>Loading matches...</div>;
+    if (error) return <div>Error loading matches</div>;
 
 
 
@@ -42,6 +57,7 @@ const ManageTournament = () => {
             });
             setDialogOpen(false);
             setData({name: '', amount: ''})
+            await refetch()
         } catch (error) {
             toast({
                 title: "Error",
@@ -61,7 +77,7 @@ const ManageTournament = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">
-                        Teams Management
+                        Tournaments Management
                     </h1>
                     <p className="text-muted-foreground">
                         Manage football teams available to users

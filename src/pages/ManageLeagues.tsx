@@ -86,7 +86,7 @@ const ManageLeagues = () => {
     try {
       const response = await api.post(
         `/admin/leagues/refetch/`,
-          {country_id: countryId}
+          {country_name: countryId}
       );
       toast({
         title: "Success",

@@ -34,9 +34,9 @@ const Dashboard = () => {
       color: "text-orange-500"
     }
   ]
-const { data, loading, error, refetch, abort } = useFetch(
-    "https://example.com/items/"
-  );
+// const { data, loading, error, refetch, abort } = useFetch(
+//     "https://example.com/items/"
+//   );
 
   return (
     <div className="space-y-8 animate-fade-in">

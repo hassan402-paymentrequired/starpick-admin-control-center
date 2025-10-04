@@ -48,7 +48,7 @@ const AllMatches = () => {
 
   if (loading) return <div>Loading matches...</div>;
   if (error) return <div>Error loading matches</div>;
-
+console.log(matches)
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -103,7 +103,7 @@ const AllMatches = () => {
                             <CardTitle className="text-lg text-foreground">
                               {match.player.name} vs {match.team?.name}
                             </CardTitle>
-                            <Badge variant="outline">{match.fixture.league.name}</Badge>
+                            <Badge variant="outline">{match?.fixture?.league?.name}</Badge>
                           </div>
                           <CardDescription className="space-y-1">
                             <div className="flex items-center gap-2">

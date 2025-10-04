@@ -120,7 +120,7 @@ const MatchCreateScreen = () => {
         )
       );
     });
-  }, []);
+  }, [data]);
 
 
   return (

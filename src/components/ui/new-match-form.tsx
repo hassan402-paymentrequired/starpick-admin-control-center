@@ -103,7 +103,8 @@ const NewMatchForm = ({
     if (!homeTeamId || !awayTeamId) return;
 
     // Fetch home team players
-    const homeRes = await get(`/admin/teams/${homeTeamId}/players`);
+    const homeRes = await get(`/admin/teams/${homeTeamId}/playing-players`);
+    console.log(homeRes)
     const homePlayersData =
       homeRes.data.data?.players?.data ||
       homeRes.data.data?.players ||
@@ -112,7 +113,7 @@ const NewMatchForm = ({
     setHomeTeamPlayers(homePlayersData);
 
     // Fetch away team players
-    const awayRes = await get(`/admin/teams/${awayTeamId}/players`);
+    const awayRes = await get(`/admin/teams/${awayTeamId}/playing-players`);
     const awayPlayersData =
       awayRes.data.data?.players?.data ||
       awayRes.data.data?.players ||

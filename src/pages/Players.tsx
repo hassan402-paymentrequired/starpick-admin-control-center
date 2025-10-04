@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Star, Filter, Download, Eye, RotateCcw } from "lucide-react";
+import {Search, Star, Filter, Download, Eye, RotateCcw, ChevronLeft, ChevronRight} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -30,7 +30,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useFetch } from "@/hooks/useFetch";
-import { Team } from "./Teams";
+import {PaginatedResponse, Team} from "./Teams";
 import { useFormRequest } from "@/hooks/useForm.ts";
 import api from "@/lib/axios";
 
@@ -56,40 +56,53 @@ const Players = () => {
   const [selectedRating, setSelectedRating] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalPlayers, setTotalPlayers] = useState(0);
-  const [itemsPerPage] = useState(12);
   const { toast } = useToast();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [paginationLinks, setPaginationLinks] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [syncTeams, setSyncTeams] = useState<Team[]>([]);
   const [selectedSyncTeam, setSelectedSyncTeam] = useState("");
-  // const { data, loading, error, refetch, abort } = useFetch<Player[]>("/admin/players");
+  const [paginationData, setPaginationData] = useState<PaginatedResponse | null>(null);
   const { patch, errors } = useFormRequest();
-  const { data, loading, error, refetch, abort } = useFetch(
-    `/admin/players?page=${currentPage}`
-  );
+  const [isRefetching, setIsRefetching] = useState(false);
 
-  useEffect(() => {
-    if (data) {
-      const playerList = data?.data?.players?.data ?? [];
-      setPlayers(playerList);
-      setFilteredPlayers(playerList);
-      setTotalPages(data?.data?.players?.last_page ?? 1);
-      setTotalPlayers(data?.data?.players?.total ?? playerList.length);
-      setPaginationLinks(data?.data?.players?.links ?? []);
-    console.log(playerList);
+  const fetchPlayers = async (page = 1, search = "") => {
+    setIsRefetching(true)
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      if (search) {
+        params.append('search', search);
+      }
+
+      const response = await api.get(`/admin/players?${params.toString()}`);
+      const data = response.data.data?.players;
+      // console.log(response)
+
+      setPaginationData(data);
+      setPlayers(data.data);
+      setCurrentPage(data.current_page);
+
+      api.get("/admin/teams").then((res) => {
+        setTeams(res.data);
+        setSyncTeams(res.data);
+      });
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch teams.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefetching(false);
     }
-  }, [data, currentPage]);
+  };
+
 
   useEffect(() => {
-    // Fetch teams for filter dropdown
-    api.get("/admin/teams").then((res) => {
-      setTeams(res.data);
-      setSyncTeams(res.data);
-    });
+    fetchPlayers(1)
   }, []);
+
 
   // Reset page to 1 only when filters/search change
   useEffect(() => {
@@ -147,8 +160,6 @@ const Players = () => {
     });
   };
 
-  // console.log(error);
-
   const handleSyncPlayers = () => {
     setDialogOpen(true);
   };
@@ -181,8 +192,96 @@ const Players = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    if (page < 1 || (paginationData && page > paginationData.last_page)) return;
+    fetchPlayers(page, searchQuery);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+console.log(paginationData)
   // Get unique teams and positions for filters
-  const positions = Array.from(new Set(players?.map((p) => p.position)));
+  const positions = Array.from(new Set(paginationData?.data?.map((p) => p.position)));
+
+  const renderPaginationButtons = () => {
+    if (!paginationData || paginationData.last_page <= 1) return null;
+
+    const buttons = [];
+    const currentPage = paginationData.current_page;
+    const lastPage = paginationData.last_page;
+
+    // Always show first page
+    if (currentPage > 3) {
+      buttons.push(
+          <Button
+              key={1}
+              variant={1 === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(1)}
+              className="min-w-[40px]"
+          >
+            1
+          </Button>
+      );
+
+      if (currentPage > 4) {
+        buttons.push(
+            <span key="ellipsis-start" className="px-2 text-muted-foreground">
+            ...
+          </span>
+        );
+      }
+    }
+
+    // Show pages around current page
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(lastPage, currentPage + 2); i++) {
+      buttons.push(
+          <Button
+              key={i}
+              variant={i === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(i)}
+              className="min-w-[40px]"
+          >
+            {i}
+          </Button>
+      );
+    }
+
+    // Always show last page
+    if (currentPage < lastPage - 2) {
+      if (currentPage < lastPage - 3) {
+        buttons.push(
+            <span key="ellipsis-end" className="px-2 text-muted-foreground">
+            ...
+          </span>
+        );
+      }
+
+      buttons.push(
+          <Button
+              key={lastPage}
+              variant={lastPage === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(lastPage)}
+              className="min-w-[40px]"
+          >
+            {lastPage}
+          </Button>
+      );
+    }
+
+    return buttons;
+  };
+
+  if (!paginationData) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading teams...</p>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -232,19 +331,7 @@ const Players = () => {
               />
             </div>
 
-            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger className="bg-background/50 border-border">
-                <SelectValue placeholder="Filter by team" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border">
-                <SelectItem value="all">All Teams</SelectItem>
-                {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
 
             <Select
               value={selectedPosition}
@@ -277,13 +364,19 @@ const Players = () => {
               </SelectContent>
             </Select>
 
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              More Filters
-            </Button>
+
           </div>
         </CardContent>
       </Card>
+
+      {isRefetching && (
+          <div className="text-center py-4">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span>Loading...</span>
+            </div>
+          </div>
+      )}
 
       {/* Players Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -433,42 +526,53 @@ const Players = () => {
       </div>
 
       {/* Pagination Controls */}
-      {paginationLinks.length > 0 && (
-        <div className="flex justify-center items-center gap-2 mt-4">
-          {paginationLinks.map((link, idx) => {
-            // Always extract page number from URL if present
-            let pageNum = null;
-            if (link.url) {
-              const match = link.url.match(/page=(\d+)/);
-              if (match) pageNum = Number(match[1]);
-            }
-            return (
-              <button
-                key={idx}
-                className={`px-3 py-1 border rounded disabled:opacity-50 ${
-                  link.active ? "bg-primary text-white" : ""
-                }`}
-                disabled={!link.url || link.active}
-                onClick={() => {
-                  if (pageNum && pageNum !== currentPage)
-                    setCurrentPage(pageNum);
-                }}
-                dangerouslySetInnerHTML={{ __html: link.label }}
-              />
-            );
-          })}
-        </div>
+      {paginationData && paginationData.last_page > 1 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {paginationData.from} to {paginationData.to} of {paginationData.total} teams
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!paginationData.prev_page_url || isRefetching}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+
+              <div className="hidden sm:flex items-center gap-1">
+                {renderPaginationButtons()}
+              </div>
+
+              <div className="sm:hidden text-sm text-muted-foreground px-2">
+                Page {currentPage} of {paginationData.last_page}
+              </div>
+
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!paginationData.next_page_url || isRefetching}
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-card/50 backdrop-blur border-border">
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">
-                {players.length}
+                {paginationData.total}
               </div>
-              <div className="text-sm text-muted-foreground">Total Players</div>
+              <div className="text-sm text-muted-foreground">Total Teams</div>
             </div>
           </CardContent>
         </Card>
@@ -476,37 +580,21 @@ const Players = () => {
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">
-                {players.filter((p) => p.isActive).length}
+                {players.filter((t) => t.status === 1).length}
               </div>
-              <div className="text-sm text-muted-foreground">
-                Active Players
-              </div>
+              <div className="text-sm text-muted-foreground">Active on Page</div>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-card/50 backdrop-blur border-border">
           <CardContent className="p-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">
-                {players.filter((p) => p.player_rating === 5).length}
+              <div className="text-2xl font-bold text-red-400">
+                {players.filter((t) => t.status === 0).length}
               </div>
               <div className="text-sm text-muted-foreground">
-                5-Star Players
+                Inactive on Page
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/50 backdrop-blur border-border">
-          <CardContent className="p-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400">
-                {Math.round(
-                  (players.reduce((acc, p) => acc + p.player_rating, 0) /
-                    players.length) *
-                    10
-                ) / 10}
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Rating</div>
             </div>
           </CardContent>
         </Card>
@@ -526,14 +614,14 @@ const Players = () => {
             onChange={(e) => setSelectedSyncTeam(e.target.value)}
           >
             <option value="">Select Team</option>
-            {syncTeams.map((team) => (
-              <option
-                key={team.external_id}
-                value={team.external_id}
-              >
-                {team.name}
-              </option>
-            ))}
+            {/*{syncTeams.map((team) => (*/}
+            {/*  <option*/}
+            {/*    key={team.external_id}*/}
+            {/*    value={team.external_id}*/}
+            {/*  >*/}
+            {/*    {team.name}*/}
+            {/*  </option>*/}
+            {/*))}*/}
           </select>
           <DialogFooter>
             <Button

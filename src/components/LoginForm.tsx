@@ -37,12 +37,13 @@ export function LoginForm({
   const onSubmit: SubmitHandler<LoginRequest> = async (data) => {
     try {
       const res = await post("/admin/login", data);
+      // console.log(res)
       setTokenAndUser(res.data.token, res.data.user);
       toast("Login successful");
       navigate("/dashboard");
     } catch (error) {
       setErrors(null);
-      // console.log(error.response)
+      console.log(error)
       setErrors(error.response?.data?.errors);
       if(error.response.data.message) {
           toast(error.response.data.message);

@@ -7,7 +7,7 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import { RotateCcw, ExternalLink } from "lucide-react";
+import {RotateCcw, ExternalLink, ChevronLeft, ChevronRight} from "lucide-react";
 import api from "@/lib/axios";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {PaginatedResponse} from "@/pages/Teams.tsx";
 
 interface Country {
   id: number;
@@ -50,13 +51,17 @@ const ManageLeagues = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paginationData, setPaginationData] = useState<PaginatedResponse | null>(null);
+  const [isRefetching, setIsRefetching] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogCountry, setDialogCountry] = useState<string | null>(null);
 
   const fetchCountries = async () => {
     try {
-      const res = await api.get("/admin/countries");
+      const res = await api.get("/admin/countries/active-countries");
       setCountries(
         res.data.data?.countries || res.data.data || res.data.countries || []
       );
@@ -65,20 +70,34 @@ const ManageLeagues = () => {
     }
   };
 
-  const fetchLeaguesFromBackend = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchLeague = async (page = 1, search = "") => {
+    setIsRefetching(true)
     try {
-      const res = await api.get(`/admin/leagues`);
-      setLeagues(res.data.data?.leagues || []);
-      console.log(res.data)
-    } catch (err) {
-      setLeagues([]);
-      setError("Failed to load leagues from backend.");
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      if (search) {
+        params.append('search', search);
+      }
+
+      const response = await api.get(`/admin/leagues?${params.toString()}`);
+      const data = response.data.data.leagues;
+
+      setPaginationData(data);
+      setLeagues(data.data);
+      setCurrentPage(data.current_page);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch teams.",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsRefetching(false);
     }
   };
+
+
 
   const fetchLeagues = async (countryId: string) => {
     setLoading(true);
@@ -107,7 +126,7 @@ const ManageLeagues = () => {
 
   useEffect(() => {
     fetchCountries();
-    fetchLeaguesFromBackend();
+    fetchLeague(1);
   }, []);
 
   const handleRefetch = () => {
@@ -140,7 +159,7 @@ const ManageLeagues = () => {
           newStatus === 1 ? "activated" : "deactivated"
         } successfully.`,
       });
-      fetchLeaguesFromBackend();
+      fetchLeague(1);
     } catch (error) {
       toast({
         title: "Error",
@@ -167,6 +186,94 @@ const ManageLeagues = () => {
       .includes(searchQuery.toLowerCase());
     return matchesCountry && matchesStatus && matchesSearch;
   });
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || (paginationData && page > paginationData.last_page)) return;
+    fetchLeague(page, searchQuery);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const renderPaginationButtons = () => {
+    if (!paginationData || paginationData.last_page <= 1) return null;
+
+    const buttons = [];
+    const currentPage = paginationData.current_page;
+    const lastPage = paginationData.last_page;
+
+    // Always show first page
+    if (currentPage > 3) {
+      buttons.push(
+          <Button
+              key={1}
+              variant={1 === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(1)}
+              className="min-w-[40px]"
+          >
+            1
+          </Button>
+      );
+
+      if (currentPage > 4) {
+        buttons.push(
+            <span key="ellipsis-start" className="px-2 text-muted-foreground">
+            ...
+          </span>
+        );
+      }
+    }
+
+    // Show pages around current page
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(lastPage, currentPage + 2); i++) {
+      buttons.push(
+          <Button
+              key={i}
+              variant={i === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(i)}
+              className="min-w-[40px]"
+          >
+            {i}
+          </Button>
+      );
+    }
+
+    // Always show last page
+    if (currentPage < lastPage - 2) {
+      if (currentPage < lastPage - 3) {
+        buttons.push(
+            <span key="ellipsis-end" className="px-2 text-muted-foreground">
+            ...
+          </span>
+        );
+      }
+
+      buttons.push(
+          <Button
+              key={lastPage}
+              variant={lastPage === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => handlePageChange(lastPage)}
+              className="min-w-[40px]"
+          >
+            {lastPage}
+          </Button>
+      );
+    }
+
+    return buttons;
+  };
+
+  if (!paginationData) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading teams...</p>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -311,6 +418,53 @@ const ManageLeagues = () => {
           </div>
         )}
       </div>
+
+      {isRefetching && (
+          <div className="text-center py-4">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span>Loading...</span>
+            </div>
+          </div>
+      )}
+
+      {paginationData && paginationData.last_page > 1 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {paginationData.from} to {paginationData.to} of {paginationData.total} teams
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!paginationData.prev_page_url || isRefetching}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+
+              <div className="hidden sm:flex items-center gap-1">
+                {renderPaginationButtons()}
+              </div>
+
+              <div className="sm:hidden text-sm text-muted-foreground px-2">
+                Page {currentPage} of {paginationData.last_page}
+              </div>
+
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!paginationData.next_page_url || isRefetching}
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+      )}
     </div>
   );
 };

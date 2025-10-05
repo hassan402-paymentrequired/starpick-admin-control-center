@@ -63,13 +63,13 @@ const Teams = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [paginationData, setPaginationData] = useState<PaginatedResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRefetching, setIsRefetching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [leagues, setLeagues] = useState([]);
   const [selectedLeague, setSelectedLeague] = useState("");
-  const [isRefetching, setIsRefetching] = useState(false);
 
   // Fetch teams with pagination
   const fetchTeams = async (page = 1, search = "") => {
@@ -105,7 +105,7 @@ const Teams = () => {
 
   useEffect(() => {
     api
-        .get("/admin/leagues?status=1")
+        .get("/admin/leagues/active-leagues")
         .then((res) =>
             setLeagues(res.data.data?.leagues || res.data.leagues || [])
         );

@@ -151,7 +151,7 @@ const Players = () => {
     await patch(`/admin/players/star/${playerId}/update`, {
       rating: newRating,
     });
-    refetch();
+    fetchPlayers(1);
     const player = players.find((p) => p.id === playerId);
 
     toast({

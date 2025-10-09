@@ -109,7 +109,7 @@ const MatchCreateScreen = () => {
    // console.log(data)
     setFixtures(data?.data?.fixtures);
 
-    api.get("/admin/leagues").then((res) => {
+    api.get("/admin/leagues/active-leagues").then((res) => {
       const leaguesData = res.data.data?.leagues || res.data.leagues || [];
       setLeagues(
         leaguesData.map(

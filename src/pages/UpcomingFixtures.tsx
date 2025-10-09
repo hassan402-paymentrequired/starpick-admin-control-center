@@ -89,7 +89,7 @@ const UpcomingFixtures = () => {
 
   useEffect(() => {
     fetchFixtures();
-    api.get("/admin/leagues").then((res) => {
+    api.get("/admin/leagues/active-leagues").then((res) => {
       setLeagues(res.data.data?.leagues || res.data);
     });
   }, []);

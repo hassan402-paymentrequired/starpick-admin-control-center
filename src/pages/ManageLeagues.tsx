@@ -81,6 +81,7 @@ const ManageLeagues = () => {
 
       const response = await api.get(`/admin/leagues?${params.toString()}`);
       const data = response.data.data.leagues;
+      console.log(data)
 
       setPaginationData(data);
       setLeagues(data.data);
@@ -104,19 +105,19 @@ const ManageLeagues = () => {
     setError(null);
     try {
       const response = await api.post(
-        `/admin/leagues/refetch/`,
+        `/admin/leagues/refetch`,
           {country_name: countryId}
       );
       toast({
         title: "Success",
         description: "Fetched leagues from external API!",
       });
-      fetchLeaguesFromBackend()
+      fetchLeague(1)
     } catch (error) {
       setLeagues([]);
       toast({
         title: "Error",
-        description: "Failed to fetch leagues from external API",
+        description: "Failed to fetch leagues from sport API",
         variant: "destructive",
       });
     } finally {

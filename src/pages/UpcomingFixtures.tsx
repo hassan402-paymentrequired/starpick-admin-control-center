@@ -78,7 +78,7 @@ const UpcomingFixtures = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/admin/fixtures/");
+      const res = await api.get("/admin/fixtures");
       setFixtures(res.data.data.fixtures);
     } catch (err) {
       setError("Failed to load fixtures.");

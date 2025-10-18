@@ -41,7 +41,7 @@ export interface Team {
 
 export interface PaginatedResponse {
   current_page: number;
-  data: any[];
+  data: unknown[];
   first_page_url: string;
   from: number;
   last_page: number;
@@ -371,7 +371,7 @@ const Teams = () => {
                             {team.status === 1 ? "Active" : "Inactive"}
                           </Badge>
                           <Link
-                              to={`/teams/${team.id}/players`}
+                              to={`/teams/${team.external_id}/players`}
                               className="ml-2 text-primary underline text-xs"
                           >
                             View Players

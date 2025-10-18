@@ -102,7 +102,7 @@ const MatchCreateScreen = () => {
   const [selectedLeague, setSelectedLeague] = useState<string>("");
   const [selectedSeason, setSelectedSeason] = useState<string>("");
   const [selectedRound, setSelectedRound] = useState<string>("");
-  const { data, loading, error, refetch } = useFetch<ExternalFixture[] >("/admin/fixtures");
+  const { data, loading, error, refetch } = useFetch<ExternalFixture[] >("/admin/fixtures/active-fixtures");
 
   // Fetch leagues from our backend
   useEffect(() => {

@@ -41,6 +41,7 @@ const TeamPlayers = () => {
     api
       .get(`/admin/teams/${teamId}/players?page=${currentPage}`)
       .then((res) => {
+        console.log(res)
         setPlayers(res.data.data.players.data);
         setTotalPages(res.data.data.players.last_page);
         setTotalPlayers(res.data.data.players.total);

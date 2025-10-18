@@ -41,7 +41,7 @@ export interface Player {
   team: Team;
   teamLogo: string;
   player_rating: number;
-  isActive: boolean;
+  status: boolean;
   external_id: string;
   nationality: string;
   created_at: string;
@@ -82,7 +82,7 @@ const Players = () => {
       setPlayers(data.data);
       setCurrentPage(data.current_page);
 
-      api.get("/admin/teams").then((res) => {
+      api.get("/admin/teams/active-teams").then((res) => {
         setTeams(res.data);
         setSyncTeams(res.data);
       });
@@ -128,22 +128,27 @@ const Players = () => {
     setFilteredPlayers(filtered);
   }, [players, searchQuery, selectedTeam, selectedPosition, selectedRating]);
 
-  const handleToggleActive = (playerId: string) => {
-    setPlayers((prevPlayers) =>
-      prevPlayers.map((player) =>
-        player.id === playerId
-          ? { ...player, isActive: !player.isActive }
-          : player
-      )
-    );
+  const handleToggleActive = async  (playerId: string) => {
+    const player = players.find((t) => t.id === playerId);
+    if (!player) return;
+    const newStatus = player.status === 1 ? 0 : 1;
 
-    const player = players.find((p) => p.id === playerId);
-    toast({
-      title: player?.isActive ? "Player Removed" : "Player Added",
-      description: `${player?.name} has been ${
-        player?.isActive ? "removed from" : "added to"
-      } the game.`,
-    });
+    try {
+      await api.patch(`/admin/players/status/${playerId}/update`);
+      await fetchPlayers(currentPage, searchQuery);
+      toast({
+        title: newStatus === 1 ? "Player Activated" : "Player Deactivated",
+        description: `${player.name} has been ${
+            newStatus === 1 ? "activated" : "deactivated"
+        } successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update status for ${player.name}.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRatingChange = async (playerId: string, newRating: number) => {
@@ -175,7 +180,6 @@ const Players = () => {
           {league: selectedSyncTeam}
       );
       console.log(response.data);
-      refetch();
       toast({
         title: "Players Synced",
         description: "Successfully synchronized players from external API.",
@@ -197,8 +201,7 @@ const Players = () => {
     fetchPlayers(page, searchQuery);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-console.log(paginationData)
-  // Get unique teams and positions for filters
+
   const positions = Array.from(new Set(paginationData?.data?.map((p) => p.position)));
 
   const renderPaginationButtons = () => {
@@ -457,7 +460,7 @@ console.log(paginationData)
                         <div>
                           <span className="text-muted-foreground">Status:</span>
                           <p className="font-medium text-foreground">
-                            {player.isActive ? "Active" : "Inactive"}
+                            {player.status ? "Active" : "Inactive"}
                           </p>
                         </div>
                       </div>
@@ -499,22 +502,20 @@ console.log(paginationData)
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <div className="flex items-center gap-2">
                   <Badge
-                    variant={player.isActive ? "default" : "secondary"}
+                    variant={player.status ? "default" : "secondary"}
                     className={
-                      player.isActive
+                      player.status
                         ? "bg-green-500/20 text-green-400 border-green-500/30"
                         : ""
                     }
                   >
-                    {player.isActive ? "In Game" : "Not in Game"}
+                    {player.status ? "Active" : "Deactivated"}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {player.isActive ? "Remove" : "Add"}
-                  </span>
+
                   <Switch
-                    checked={player.isActive}
+                    checked={player.status}
                     onCheckedChange={() => handleToggleActive(player.id)}
                     className="data-[state=checked]:bg-primary"
                   />
@@ -572,7 +573,7 @@ console.log(paginationData)
               <div className="text-2xl font-bold text-foreground">
                 {paginationData.total}
               </div>
-              <div className="text-sm text-muted-foreground">Total Teams</div>
+              <div className="text-sm text-muted-foreground">Total Players</div>
             </div>
           </CardContent>
         </Card>
@@ -580,7 +581,7 @@ console.log(paginationData)
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-400">
-                {players.filter((t) => t.status === 1).length}
+                {players.filter((t) => t.status).length}
               </div>
               <div className="text-sm text-muted-foreground">Active on Page</div>
             </div>
@@ -590,7 +591,7 @@ console.log(paginationData)
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-red-400">
-                {players.filter((t) => t.status === 0).length}
+                {players.filter((t) => t.status).length}
               </div>
               <div className="text-sm text-muted-foreground">
                 Inactive on Page
@@ -614,14 +615,14 @@ console.log(paginationData)
             onChange={(e) => setSelectedSyncTeam(e.target.value)}
           >
             <option value="">Select Team</option>
-            {/*{syncTeams.map((team) => (*/}
-            {/*  <option*/}
-            {/*    key={team.external_id}*/}
-            {/*    value={team.external_id}*/}
-            {/*  >*/}
-            {/*    {team.name}*/}
-            {/*  </option>*/}
-            {/*))}*/}
+            {syncTeams.map((team) => (
+              <option
+                key={team.external_id}
+                value={team.external_id}
+              >
+                {team.name}
+              </option>
+            ))}
           </select>
           <DialogFooter>
             <Button

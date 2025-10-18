@@ -19,6 +19,7 @@ import {
 import { RotateCcw } from "lucide-react";
 import api from "@/lib/axios";
 import { useToast } from "@/hooks/use-toast";
+import {Input} from "@/components/ui/input.tsx";
 
 interface Fixture {
   id: number;
@@ -69,8 +70,8 @@ const UpcomingFixtures = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [selectedLeague, setSelectedLeague] = useState("");
-  const [selectedSeason, setSelectedSeason] = useState("");
-  const [selectedRound, setSelectedRound] = useState("");
+  const [selectedFrom, setSelectedFrom] = useState("");
+  const [selectedTo, setSelectedTo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -104,7 +105,9 @@ const UpcomingFixtures = () => {
     setDialogOpen(false);
     try {
      await api.post("/admin/fixtures/refetch", {
-         league: selectedLeague
+         league: selectedLeague,
+       from: selectedFrom,
+       to: selectedTo,
      })
       await  fetchFixtures();
     } catch (error) {
@@ -252,7 +255,7 @@ const UpcomingFixtures = () => {
           <DialogHeader>
             <DialogTitle>Select League, Season and Round</DialogTitle>
             <DialogDescription>
-              Please select a league, season and round to fetch fixtures from
+              Please select a league and the date to fetch fixtures from
               the external API.
             </DialogDescription>
           </DialogHeader>
@@ -275,6 +278,21 @@ const UpcomingFixtures = () => {
               </select>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  From
+                </label>
+                <Input value={selectedFrom} onChange={(e) => setSelectedFrom(e.target.value)} type="date" className="w-full px-3 py-2 rounded border border-input bg-background text-foreground" />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  to
+                </label>
+                <Input value={selectedTo} onChange={(e) => setSelectedTo(e.target.value)} type="date" className="w-full px-3 py-2 rounded border border-input bg-background text-foreground" />
+              </div>
+            </div>
 
           </div>
           <DialogFooter>

@@ -107,15 +107,22 @@ const Players = () => {
   // Reset page to 1 only when filters/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedTeam, selectedPosition, selectedRating]);
+  }, [selectedTeam, selectedPosition, selectedRating]);
+
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        fetchPlayers(1, searchQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
   // Filter players when players or filters change (but don't reset page)
   useEffect(() => {
     const filtered = players.filter((player) => {
-      const matchesSearch =
-        player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player?.team?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        player.position.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPosition =
         selectedPosition === "all" || player.position === selectedPosition;
       const matchesTeam =
@@ -123,15 +130,15 @@ const Players = () => {
       const matchesRating =
         selectedRating === "all" ||
         player.player_rating === Number(selectedRating);
-      return matchesSearch && matchesPosition && matchesTeam && matchesRating;
+      return  matchesPosition && matchesTeam && matchesRating;
     });
     setFilteredPlayers(filtered);
-  }, [players, searchQuery, selectedTeam, selectedPosition, selectedRating]);
+  }, [players, selectedTeam, selectedPosition, selectedRating]);
 
   const handleToggleActive = async  (playerId: string) => {
     const player = players.find((t) => t.id === playerId);
     if (!player) return;
-    const newStatus = player.status === 1 ? 0 : 1;
+    const newStatus = player.status ? 0 : 1;
 
     try {
       await api.patch(`/admin/players/status/${playerId}/update`);

@@ -6,7 +6,7 @@ import {
   CardContent,
   CardDescription,
 } from "@/components/ui/card";
-import {ChevronLeft, ChevronRight, RotateCcw} from "lucide-react";
+import {ChevronLeft, ChevronRight, Filter, RotateCcw, Search} from "lucide-react";
 import api from "@/lib/axios";
 import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {PaginatedResponse} from "@/pages/Teams.tsx";
 import {Button} from "@/components/ui/button.tsx";
+import {Input} from "@/components/ui/input.tsx";
 
 interface Country {
   id: number;
@@ -65,6 +66,16 @@ const AvailableCountries = () => {
   useEffect(() => {
     fetchCountries(1);
   }, []);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (searchQuery !== undefined) {
+        fetchCountries(1, searchQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
 
   const handleRefetch = async () => {
@@ -209,7 +220,32 @@ const AvailableCountries = () => {
       <p className="text-muted-foreground mb-6">
         These are the countries currently available in the system.
       </p>
+
       {error && <div className="text-red-500 font-medium">{error}</div>}
+
+      <Card className="bg-card/50 backdrop-blur border-border">
+        <CardHeader>
+          <CardTitle className="text-foreground">Search & Filter</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                  placeholder="Search teams by name, league, or country..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-background/50 border-border"
+              />
+            </div>
+            <Button variant="outline">
+              <Filter className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {countries.map((country) => (
           <Card

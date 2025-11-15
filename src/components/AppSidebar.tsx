@@ -8,7 +8,7 @@ import {
   Star,
   Swords,
   Globe,
-  Trophy
+  Trophy, Coins
 } from "lucide-react";
 
 import {
@@ -31,7 +31,7 @@ const navigationItems = [
   { title: "Upcoming Fixtures", url: "/fixtures", icon: Star },
   { title: "Countries", url: "/countries", icon: Globe },
   { title: "Leagues", url: "/leagues", icon: Trophy },
-  // { title: "Seasons", url: "/seasons", icon: Calendar },
+  { title: "Withdrawal requests", url: "/withdrawn-request", icon: Coins },
   { title: "Tournament", url: "/tournament", icon: Swords },
   { title: "Peers", url: "/rooms", icon: Users },
   { title: "Matches", url: "/match-creation", icon: Swords },

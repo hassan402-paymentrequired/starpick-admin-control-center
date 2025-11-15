@@ -25,6 +25,7 @@ import ManageSeasons from "./pages/ManageSeasons";
 import ManageRounds from "./pages/ManageRounds";
 import LeagueDetail from "./pages/LeagueDetail";
 import ManageTournament from "@/pages/ManageTournament.tsx";
+import WithdrawRequest from "@/pages/WithdrawRequest.tsx";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/leagues/:leagueId" element={<LeagueDetail />} />
             <Route path="/seasons" element={<ManageSeasons />} />
             <Route path="/rounds" element={<ManageRounds />} />
+            <Route path="/withdrawn-request" element={<WithdrawRequest />} />
             <Route path="/teams/:teamId/players" element={<TeamPlayers />} />
             <Route path="*" element={<NotFound />} />
           </Route>

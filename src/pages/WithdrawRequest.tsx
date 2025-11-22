@@ -1,75 +1,166 @@
-import React, { useState } from 'react';
-import {CheckCircle, XCircle, Clock, Search, Filter, User, Building2, CreditCard, Calendar} from 'lucide-react';
+import React, {useEffect, useState} from 'react';
+import {
+    CheckCircle,
+    XCircle,
+    Clock,
+    Search,
+    Filter,
+    ChevronLeft, ChevronRight
+} from 'lucide-react';
 import StatsCard from "@/components/stats-card.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import RequestCard from "@/components/request-card.tsx";
+import {useToast} from "@/hooks/use-toast.ts";
+import {PaginatedResponse} from "@/pages/Teams.tsx";
+import api from "@/lib/axios.ts";
+import {Button} from "@/components/ui/button.tsx";
+
 
 const WithdrawRequest = () => {
-    const [requests, setRequests] = useState([
-        {
-            id: 1,
-            userName: 'John Doe',
-            email: 'john@example.com',
-            amount: 5000,
-            bankName: 'First Bank',
-            accountNumber: '1234567890',
-            accountName: 'John Doe',
-            initiatedDate: '2025-11-14 10:30 AM',
-            status: 'pending'
-        },
-        {
-            id: 2,
-            userName: 'Jane Smith',
-            email: 'jane@example.com',
-            amount: 12000,
-            bankName: 'GTBank',
-            accountNumber: '0987654321',
-            accountName: 'Jane Smith',
-            initiatedDate: '2025-11-14 09:15 AM',
-            status: 'pending'
-        },
-        {
-            id: 3,
-            userName: 'Mike Johnson',
-            email: 'mike@example.com',
-            amount: 8500,
-            bankName: 'Access Bank',
-            accountNumber: '5555666677',
-            accountName: 'Mike Johnson',
-            initiatedDate: '2025-11-13 03:45 PM',
-            status: 'approved'
-        },
-        {
-            id: 4,
-            userName: 'Sarah Williams',
-            email: 'sarah@example.com',
-            amount: 15000,
-            bankName: 'Zenith Bank',
-            accountNumber: '2233445566',
-            accountName: 'Sarah Williams',
-            initiatedDate: '2025-11-13 02:20 PM',
-            status: 'rejected',
-            rejectionReason: 'Insufficient documentation provided'
-        },
-        {
-            id: 5,
-            userName: 'David Brown',
-            email: 'david@example.com',
-            amount: 7200,
-            bankName: 'UBA',
-            accountNumber: '9988776655',
-            accountName: 'David Brown',
-            initiatedDate: '2025-11-12 11:45 AM',
-            status: 'pending'
-        }
-    ]);
+    const [requests, setRequests] = useState([]);
 
     const [filterStatus, setFilterStatus] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [modalAction, setModalAction] = useState('');
+
+    const [paginationData, setPaginationData] = useState<PaginatedResponse | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isRefetching, setIsRefetching] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const { toast } = useToast();
+
+    const fetchRequests = async (page = 1, search = "") => {
+        setIsRefetching(true)
+        try {
+            const params = new URLSearchParams();
+            params.append('page', page.toString());
+            if (search) {
+                params.append('search', search);
+            }
+
+            const response = await api.get(`/admin/withdraw?${params.toString()}`);
+            const data = response.data;
+            console.log(data.data.requests.data);
+
+            setPaginationData(data.data.requests);
+            setRequests(data.data.requests.data);
+            setCurrentPage(data.data.requests.current_page);
+        } catch (error) {
+            console.error('Error fetching teams:', error);
+            toast({
+                title: "Error",
+                description: "Failed to fetch teams.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsRefetching(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests(1);
+    }, []);
+
+    useEffect(() => {
+        const delayDebounce = setTimeout(() => {
+            if (searchQuery !== undefined) {
+                fetchRequests(1, searchQuery);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounce);
+    }, [searchQuery]);
+
+    const handlePageChange = (page: number) => {
+        if (page < 1 || (paginationData && page > paginationData.last_page)) return;
+        fetchRequests(page, searchQuery);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const renderPaginationButtons = () => {
+        if (!paginationData || paginationData.last_page <= 1) return null;
+
+        const buttons = [];
+        const currentPage = paginationData.current_page;
+        const lastPage = paginationData.last_page;
+
+        // Always show first page
+        if (currentPage > 3) {
+            buttons.push(
+                <Button
+                    key={1}
+                    variant={1 === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(1)}
+                    className="min-w-[40px]"
+                >
+                    1
+                </Button>
+            );
+
+            if (currentPage > 4) {
+                buttons.push(
+                    <span key="ellipsis-start" className="px-2 text-muted-foreground">
+            ...
+          </span>
+                );
+            }
+        }
+
+        // Show pages around current page
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(lastPage, currentPage + 2); i++) {
+            buttons.push(
+                <Button
+                    key={i}
+                    variant={i === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(i)}
+                    className="min-w-[40px]"
+                >
+                    {i}
+                </Button>
+            );
+        }
+
+        // Always show last page
+        if (currentPage < lastPage - 2) {
+            if (currentPage < lastPage - 3) {
+                buttons.push(
+                    <span key="ellipsis-end" className="px-2 text-muted-foreground">
+            ...
+          </span>
+                );
+            }
+
+            buttons.push(
+                <Button
+                    key={lastPage}
+                    variant={lastPage === currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(lastPage)}
+                    className="min-w-[40px]"
+                >
+                    {lastPage}
+                </Button>
+            );
+        }
+
+        return buttons;
+    };
+
+    if (!paginationData) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-muted-foreground">Loading withdraw requests...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleApprove = (request) => {
         setSelectedRequest(request);
@@ -86,37 +177,38 @@ const WithdrawRequest = () => {
 
     const confirmAction = () => {
         if (modalAction === 'approve') {
-            setRequests(requests.map(req =>
-                req.id === selectedRequest.id
-                    ? { ...req, status: 'approved' }
-                    : req
-            ));
+           api.patch(`/admin/withdraw/${selectedRequest.id}/status`, { status: 'paid' })
+               .then(response => {
+                   toast({
+                       title: "Success",
+                       description: response.data.data.message || "Request approved successfully.",
+                   });
+               })
+               .catch(error =>
+                   console.error('Error approving withdrawal request:', error)
+               )
         } else if (modalAction === 'reject' && rejectionReason.trim()) {
-            setRequests(requests.map(req =>
-                req.id === selectedRequest.id
-                    ? { ...req, status: 'rejected', rejectionReason }
-                    : req
-            ));
+            api.patch(`/admin/withdraw/${selectedRequest.id}/status`, { status: 'rejected', reason: rejectionReason })
+                .then(response => {
+                    toast({
+                        title: "Success",
+                        description: response.data.data.message || "Request Rejected successfully.",
+                    });
+                })
+                .catch(error =>
+                    console.error('Error approving withdrawal request:', error)
+                )
         }
+        fetchRequests(currentPage, searchQuery);
         setShowModal(false);
         setSelectedRequest(null);
         setRejectionReason('');
     };
 
-    const filteredRequests = requests.filter(req => {
-        const matchesStatus = filterStatus === 'all' || req.status === filterStatus;
-        const matchesSearch = req.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            req.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            req.accountNumber.includes(searchTerm);
-        return matchesStatus && matchesSearch;
-    });
-
-
-
     const stats = {
-        pending: requests.filter(r => r.status === 'pending').length,
-        approved: requests.filter(r => r.status === 'approved').length,
-        rejected: requests.filter(r => r.status === 'rejected').length
+        pending: 20,
+        approved: 12,
+        rejected: 3
     };
 
     return (
@@ -146,8 +238,8 @@ const WithdrawRequest = () => {
                                 type="text"
                                 placeholder="Search by name, email, or account number..."
                                 className="w-full pl-10 pr-4 py-2 "
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -161,16 +253,25 @@ const WithdrawRequest = () => {
                                 <option value="">Select League</option>
                                 <option value="all">All Status</option>
                                 <option value="pending">Pending</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
+                                <option value="approved">Paid</option>
+                                <option value="rejected">Canceled</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
+                {isRefetching && (
+                    <div className="text-center py-4">
+                        <div className="inline-flex items-center gap-2 text-muted-foreground">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            <span>Loading...</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Requests Table */}
-                {filteredRequests.length === 0 ? (
-                    <div className="bg-white rounded-2xl shadow-lg p-12 text-center border border-gray-200">
+                {requests.length === 0 ? (
+                    <div className=" rounded-2xl shadow-lg p-12 text-center border border-gray-200">
                         <div className="text-gray-400 mb-4">
                             <Search className="w-16 h-16 mx-auto" />
                         </div>
@@ -178,27 +279,65 @@ const WithdrawRequest = () => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {filteredRequests.map((request) => (
+                        {requests.map((request) => (
                             <RequestCard request={request} handleApprove={handleApprove} handleReject={handleReject} />
                         ))}
                     </div>
                 )}
             </div>
 
+            {paginationData && paginationData.last_page > 1 && (
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-5">
+                    <div className="text-sm text-muted-foreground">
+                        Showing {paginationData.from} to {paginationData.to} of {paginationData.total} teams
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={!paginationData.prev_page_url || isRefetching}
+                        >
+                            <ChevronLeft className="w-4 h-4 mr-1" />
+                            Previous
+                        </Button>
+
+                        <div className="hidden sm:flex items-center gap-1">
+                            {renderPaginationButtons()}
+                        </div>
+
+                        <div className="sm:hidden text-sm text-muted-foreground px-2">
+                            Page {currentPage} of {paginationData.last_page}
+                        </div>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={!paginationData.next_page_url || isRefetching}
+                        >
+                            Next
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                    <div className="bg-gray-100 rounded-lg shadow-xl max-w-md w-full p-6">
                         <h3 className="text-xl font-bold text-gray-900 mb-4">
                             {modalAction === 'approve' ? 'Approve Withdrawal Request' : 'Reject Withdrawal Request'}
                         </h3>
 
                         {selectedRequest && (
-                            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600">User: <span className="font-semibold text-gray-900">{selectedRequest.userName}</span></p>
+                            <div className="mb-4 p-4 bg-gray-200 rounded-lg">
+                                <p className="text-sm text-gray-600">User: <span className="font-semibold text-gray-900">{selectedRequest.user.name}</span></p>
                                 <p className="text-sm text-gray-600">Amount: <span className="font-semibold text-gray-900">₦{selectedRequest.amount.toLocaleString()}</span></p>
-                                <p className="text-sm text-gray-600">Bank: <span className="font-semibold text-gray-900">{selectedRequest.bankName}</span></p>
-                                <p className="text-sm text-gray-600">Account: <span className="font-semibold text-gray-900">{selectedRequest.accountNumber}</span></p>
+                                <p className="text-sm text-gray-600">Bank: <span className="font-semibold text-gray-900">{selectedRequest.bank_name}</span></p>
+                                <p className="text-sm text-gray-600">Account: <span className="font-semibold text-gray-900">{selectedRequest.account_name} - {selectedRequest.account_number}</span></p>
                             </div>
                         )}
 
@@ -208,7 +347,7 @@ const WithdrawRequest = () => {
                                     Rejection Reason <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full px-3 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                                     rows={4}
                                     placeholder="Please provide a reason for rejection..."
                                     value={rejectionReason}

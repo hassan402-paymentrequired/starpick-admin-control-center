@@ -172,7 +172,7 @@ const ManageLeagues = () => {
 
   const getSeason = (seasons: string) => {
     const season = JSON.parse(seasons);
-    return season.year;
+    return season?.year || 'not provided' ;
   }
 
   // Filtering logic
